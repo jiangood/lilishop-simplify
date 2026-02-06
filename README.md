@@ -1,0 +1,3 @@
+
+初始化git地址
+https://gitee.com/beijing_hongye_huicheng/lilishop/commit/8fcc5ebfd3d6bf125b58b07b5223853473adcd62
