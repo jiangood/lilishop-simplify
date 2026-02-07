@@ -14,12 +14,14 @@ import org.springframework.util.MultiValueMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 
 @Slf4j
 @Component
 public class MessageQueueProcessor {
+    public static final int BATCH_PROCESS_SIZE = 1000;
+    public static final int TINY_MESSAGE_COUNT = 100;
+
 
     @Autowired
     private MessageQueueService messageQueueService;
@@ -48,13 +50,13 @@ public class MessageQueueProcessor {
 
     @Scheduled(fixedDelay = 5000)
     public void processMessages() {
-        List<MessageQueue> pendingMessages = messageQueueService.findPending(1000);
+        List<MessageQueue> pendingMessages = messageQueueService.findPending(BATCH_PROCESS_SIZE);
         if (pendingMessages.isEmpty()) {
             return;
         }
 
         // 量小，串行
-        if (pendingMessages.size() < 100) {
+        if (pendingMessages.size() < TINY_MESSAGE_COUNT) {
             pendingMessages.forEach(this::processOne);
             return;
         }
