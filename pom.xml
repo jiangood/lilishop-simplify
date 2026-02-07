@@ -50,7 +50,6 @@
         <xk-time>3.2.3</xk-time>
         <commons-text>1.14.0</commons-text>
         <enjoy.version>4.3</enjoy.version>
-        <xxl-job>2.3.0</xxl-job>
         <spotify>1.2.2</spotify>
 
         <owasp-java-html-sanitizer>20211018.2</owasp-java-html-sanitizer>
@@ -66,12 +65,6 @@
 
 
     <dependencies>
-        <dependency>
-            <groupId>com.xuxueli</groupId>
-            <artifactId>xxl-job-core</artifactId>
-            <version>2.3.0</version>
-        </dependency>
-
         <!--buyer-api use-->
         <dependency>
             <groupId>com.jfinal</groupId>
