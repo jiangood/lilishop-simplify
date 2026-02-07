@@ -8,8 +8,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 
 @Slf4j
@@ -19,39 +24,66 @@ public class MessageQueueProcessor {
     @Autowired
     private MessageQueueService messageQueueService;
 
-    @Autowired
-    private List<MessageQueueListener> messageQueueListeners;
 
+    private final Map<String, MessageQueueListener> listenerMap = new HashMap<>();
+
+    public MessageQueueProcessor(MessageQueueService messageQueueService, List<MessageQueueListener> messageQueueListeners) {
+        this.messageQueueService = messageQueueService;
+
+        for (MessageQueueListener messageQueueListener : messageQueueListeners) {
+            if (listenerMap.containsKey(messageQueueListener.getTopic())) {
+                throw new IllegalArgumentException("Duplicate listener for topic: " + messageQueueListener.getTopic());
+            }
+            listenerMap.put(messageQueueListener.getTopic(), messageQueueListener);
+        }
+
+    }
 
     private MessageQueueListener findByTopic(String topic) {
-        List<MessageQueueListener> list = messageQueueListeners.stream()
-                .filter(listener -> listener.getTopic().equals(topic)).toList();
-        Assert.state(list.size() == 1, "There should be only one listener for each topic");
-        return list.get(0);
+        MessageQueueListener listener = listenerMap.get(topic);
+        Assert.notNull(listener, "No listener found for topic: " + topic);
+        return listener;
     }
 
 
-    @Scheduled(fixedDelay = 3000)
+    @Scheduled(fixedDelay = 5000)
     public void processMessages() {
-        List<MessageQueue> pendingMessages = messageQueueService.findPending(10);
+        List<MessageQueue> pendingMessages = messageQueueService.findPending(1000);
         if (pendingMessages.isEmpty()) {
-           return;
+            return;
         }
 
-        for (MessageQueue message : pendingMessages) {
-            try {
-                log.info("Processing message: id={}, topic={}, tag={}", message.getId(), message.getTopic(), message.getTag());
-
-                MessageQueueListener listener = this.findByTopic(message.getTopic());
-                listener.onMessage(message);
-                messageQueueService.markAsProcessed(message.getId());
-                log.info("Message processed successfully: id={}", message.getId());
-            } catch (Exception e) {
-                log.error("Failed to process message: id={}, error={}", message.getId(), e.getMessage(), e);
-                messageQueueService.markAsFailed(message.getId(), e.getMessage());
-            }
+        // 量小，串行
+        if (pendingMessages.size() < 100) {
+            pendingMessages.forEach(this::processOne);
+            return;
         }
 
+        // 量大，并行
+        MultiValueMap<String, MessageQueue> topicMessageList = new LinkedMultiValueMap<>();
+        for (MessageQueue pendingMessage : pendingMessages) {
+            topicMessageList.add(pendingMessage.getTopic(), pendingMessage);
+        }
+
+        topicMessageList.entrySet().parallelStream().forEachOrdered(entry -> {
+            List<MessageQueue> messages = entry.getValue();
+            messages.forEach(this::processOne);
+        });
+
+    }
+
+    private void processOne(MessageQueue message) {
+        try {
+            log.info("Processing message: id={}, topic={}, tag={}", message.getId(), message.getTopic(), message.getTag());
+
+            MessageQueueListener listener = this.findByTopic(message.getTopic());
+            listener.onMessage(message);
+            messageQueueService.markAsProcessed(message.getId());
+            log.info("Message processed successfully: id={}", message.getId());
+        } catch (Exception e) {
+            log.error("Failed to process message: id={}, error={}", message.getId(), e.getMessage(), e);
+            messageQueueService.markAsFailed(message.getId(), e.getMessage());
+        }
     }
 
     /**
