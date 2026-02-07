@@ -45,7 +45,9 @@ public class MessageQueueService  {
     public List<MessageQueue> findPendingByTopic(String topic, int limit) {
         return messageQueueRepository.findByTopicAndStatus(topic, 0, Pageable.ofSize(limit)).getContent();
     }
-
+    public List<MessageQueue> findPending( int limit) {
+        return messageQueueRepository.findByStatus( 0, Pageable.ofSize(limit)).getContent();
+    }
     
     @Transactional
     public boolean markAsProcessed(Long id) {
