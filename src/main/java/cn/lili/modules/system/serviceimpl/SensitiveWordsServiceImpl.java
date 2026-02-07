@@ -1,11 +1,11 @@
 package cn.lili.modules.system.serviceimpl;
 
 import cn.lili.cache.Cache;
-import cn.lili.cache.CachePrefix;
 import cn.lili.modules.system.entity.dos.SensitiveWords;
 import cn.lili.modules.system.mapper.SensitiveWordsMapper;
 import cn.lili.modules.system.service.SensitiveWordsService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -20,17 +20,23 @@ import java.util.stream.Collectors;
  */
 @Service
 public class SensitiveWordsServiceImpl extends ServiceImpl<SensitiveWordsMapper, SensitiveWords> implements SensitiveWordsService {
-    @Autowired
-    private Cache<List<String>> cache;
+
+
+
+    @PostConstruct
+    public void init() {
+        resetSensitiveWordsFilter();
+    }
 
     @Override
-    public void resetCache() {
+    public void resetSensitiveWordsFilter() {
         List<SensitiveWords> sensitiveWordsList = this.list();
 
         if (sensitiveWordsList == null || sensitiveWordsList.isEmpty()) {
             return;
         }
         List<String> sensitiveWords = sensitiveWordsList.stream().map(SensitiveWords::getSensitiveWord).collect(Collectors.toList());
-        cache.put(CachePrefix.SENSITIVE.getPrefix(), sensitiveWords);
+        // 实时更新敏感词过滤器
+        cn.lili.common.sensitive.SensitiveWordsFilter.init(sensitiveWords);
     }
 }

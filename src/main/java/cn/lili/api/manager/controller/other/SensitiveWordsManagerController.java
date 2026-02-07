@@ -47,7 +47,7 @@ public class SensitiveWordsManagerController {
     @PostMapping
     public ResultMessage<SensitiveWords> add(@Valid SensitiveWords sensitiveWords) {
         sensitiveWordsService.save(sensitiveWords);
-        sensitiveWordsService.resetCache();
+        sensitiveWordsService.resetSensitiveWordsFilter();
         return ResultUtil.data(sensitiveWords);
     }
 
@@ -57,7 +57,7 @@ public class SensitiveWordsManagerController {
             @Parameter(description = "敏感词ID", required = true) @PathVariable String id, SensitiveWords sensitiveWords) {
         sensitiveWords.setId(id);
         sensitiveWordsService.updateById(sensitiveWords);
-        sensitiveWordsService.resetCache();
+        sensitiveWordsService.resetSensitiveWordsFilter();
         return ResultUtil.data(sensitiveWords);
     }
 
@@ -66,7 +66,7 @@ public class SensitiveWordsManagerController {
     public ResultMessage<Object> delAllByIds(
             @Parameter(description = "敏感词ID", required = true) @PathVariable List<String> ids) {
         sensitiveWordsService.removeByIds(ids);
-        sensitiveWordsService.resetCache();
+        sensitiveWordsService.resetSensitiveWordsFilter();
         return ResultUtil.success();
     }
 }

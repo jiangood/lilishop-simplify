@@ -508,10 +508,7 @@ public enum CachePrefix {
      * 订单暂时缓存
      */
     ORDER,
-    /**
-     * 敏感词
-     */
-    SENSITIVE,
+
 
     /**
      * 扫码登录

@@ -28,7 +28,7 @@ public class SensitiveWordsInit implements ApplicationRunner {
      */
     @Override
     public void run(ApplicationArguments args) {
-        sensitiveWordsService.resetCache();
+        sensitiveWordsService.resetSensitiveWordsFilter();
     }
 
 }

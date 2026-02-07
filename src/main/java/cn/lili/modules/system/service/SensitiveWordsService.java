@@ -14,6 +14,6 @@ public interface SensitiveWordsService extends IService<SensitiveWords> {
     /**
      * 重新写入缓存
      */
-    void resetCache();
+    void resetSensitiveWordsFilter();
 
 }
