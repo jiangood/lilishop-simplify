@@ -8,28 +8,32 @@
 https://gitee.com/beijing_hongye_huicheng/lilishop/commit/8fcc5ebfd3d6bf125b58b07b5223853473adcd62
 
 
+# TODO
+我的数据库是mysql8，支持全文搜索。 使用mysql8的特性来替代 es
 
 
 # 记录下怎么修改的
 部分工作由trae ai完成
 
-## 先合并代码
-## 去掉redis，改为内存缓存
-## 整合安全认证模块
+先合并代码
+去掉redis，改为内存缓存
+整合安全认证模块
 
 
-## 去掉xxl-job
+去掉xxl-job
 ai: 去掉xxl-job,改为springboot的任务调度
-## 去掉es
-我的数据库是mysql8，支持全文搜索。 使用mysql8的特性来替代 es
 
-ai：
-- 加入jpa依赖
-- 移除elasticsearch，必要的实体使用jpa替代
+
+去掉es
+ 
+移除elasticsearch，必要的实体使用jpa替代
+
+加入jpa依赖
+
 
 然后手动修改mysql8的全文搜索特性
 
-## 去掉mq
+ 去掉mq
 ai-plan：使用jpa实现一个简单的消息队列，目标是替换项目的mq， 要求类名简洁直观
      
 
