@@ -6,7 +6,7 @@ import cn.lili.common.security.enums.UserEnums;
 import cn.lili.common.utils.IpUtils;
 import cn.lili.common.utils.SpelUtil;
 import cn.lili.common.utils.ThreadPoolUtil;
-import cn.lili.modules.permission.entity.dos.SystemLog;
+import cn.lili.modules.permission.entity.vo.SystemLogVO;
 import cn.lili.modules.permission.service.SystemLogService;
 import cn.lili.modules.system.aspect.annotation.SystemLogPoint;
 import jakarta.servlet.http.HttpServletRequest;
@@ -85,44 +85,44 @@ public class SystemLogAspect {
 
             Map<String, String[]> logParams = request.getParameterMap();
             AuthUser authUser = UserContext.getCurrentUser();
-            SystemLog systemLog = new SystemLog();
+            SystemLogVO systemLogVO = new SystemLogVO();
 
             if (authUser == null) {
                 //如果是商家则记录商家id，否则记录-1，代表平台id
-                systemLog.setStoreId(-2L);
+                systemLogVO.setStoreId(-2L);
                 //请求用户
-                systemLog.setUsername("游客");
+                systemLogVO.setUsername("游客");
             } else {
                 //如果是商家则记录商家id，否则记录-1，代表平台id
-                systemLog.setStoreId(authUser.getRole().equals(UserEnums.STORE) ? Long.parseLong(authUser.getStoreId()) : -1);
+                systemLogVO.setStoreId(authUser.getRole().equals(UserEnums.STORE) ? Long.parseLong(authUser.getStoreId()) : -1);
                 //请求用户
-                systemLog.setUsername(authUser.getUsername());
+                systemLogVO.setUsername(authUser.getUsername());
             }
 
             //日志标题
-            systemLog.setName(description);
+            systemLogVO.setName(description);
             //日志请求url
-            systemLog.setRequestUrl(request.getRequestURI());
+            systemLogVO.setRequestUrl(request.getRequestURI());
             //请求方式
-            systemLog.setRequestType(request.getMethod());
+            systemLogVO.setRequestType(request.getMethod());
             //请求参数
-            systemLog.setRequestParam(cn.hutool.core.map.MapUtil.toString(logParams));
+            systemLogVO.setMapToParams(logParams);
             //响应参数 此处数据太大了，所以先注释掉
-//           systemLog.setResponseBody(JSONUtil.toJsonStr(rvt));
+//           systemLogVO.setResponseBody(JSONUtil.toJsonStr(rvt));
             //请求IP
-            systemLog.setIp(IpUtils.getIpAddress(request));
+            systemLogVO.setIp(IpUtils.getIpAddress(request));
             //IP地址
-//            systemLog.setIpInfo(ipHelper.getIpCity(request));
+//            systemLogVO.setIpInfo(ipHelper.getIpCity(request));
             //写入自定义日志内容
-            systemLog.setCustomerLog(customerLog);
+            systemLogVO.setCustomerLog(customerLog);
             //请求开始时间
             long beginTime = BEGIN_TIME_THREAD_LOCAL.get().getTime();
             long endTime = System.currentTimeMillis();
             //请求耗时
             Long usedTime = endTime - beginTime;
-            systemLog.setCostTime(usedTime.intValue());
+            systemLogVO.setCostTime(usedTime.intValue());
             //调用线程保存
-            ThreadPoolUtil.getPool().execute(new SaveSystemLogThread(systemLog, systemLogService));
+            ThreadPoolUtil.getPool().execute(new SaveSystemLogThread(systemLogVO, systemLogService));
 
 
             BEGIN_TIME_THREAD_LOCAL.remove();
@@ -135,20 +135,20 @@ public class SystemLogAspect {
      * 保存日志
      */
     private static class SaveSystemLogThread implements Runnable {
-        private final SystemLog systemLog;
+        private final SystemLogVO systemLogVO;
         private final SystemLogService systemLogService;
 
-        public SaveSystemLogThread(SystemLog systemLog, SystemLogService systemLogService) {
-            this.systemLog = systemLog;
+        public SaveSystemLogThread(SystemLogVO systemLogVO, SystemLogService systemLogService) {
+            this.systemLogVO = systemLogVO;
             this.systemLogService = systemLogService;
         }
 
         @Override
         public void run() {
             try {
-                systemLogService.saveLog(systemLog);
+                systemLogService.saveLog(systemLogVO);
             } catch (Exception e) {
-                log.error("系统日志保存异常,内容{}：", systemLog, e);
+                log.error("系统日志保存异常,内容{}：", systemLogVO, e);
             }
         }
     }
