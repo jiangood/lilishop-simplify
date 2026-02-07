@@ -5,7 +5,9 @@ import cn.lili.common.message.queue.entity.MessageQueue;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,11 +44,9 @@ public class MessageQueueService  {
     }
 
 
-    public List<MessageQueue> findPendingByTopic(String topic, int limit) {
-        return messageQueueRepository.findByTopicAndStatus(topic, 0, Pageable.ofSize(limit)).getContent();
-    }
     public List<MessageQueue> findPending( int limit) {
-        return messageQueueRepository.findByStatus( 0, Pageable.ofSize(limit)).getContent();
+        PageRequest pageable = PageRequest.of(0, limit, Sort.by("id"));
+        return messageQueueRepository.findByStatus( 0, pageable).getContent();
     }
     
     @Transactional
