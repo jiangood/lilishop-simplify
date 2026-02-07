@@ -26,5 +26,5 @@ ai：
 - 加入jpa依赖
 - SystemLog改为jpa实现，包括修改SystemLogVo为jpa实体, SystemLogRepository等， 注意使用的springboot3
 - 删除ElasticsearchController
-- 移除elasticsearch，已有数据直接查数据库即可。保持原有的逻辑，如果影响功能逻辑，加上 TODO 注释
+- 移除elasticsearch，使用jpa替代，必要的地方加上 TODO 注释
      
