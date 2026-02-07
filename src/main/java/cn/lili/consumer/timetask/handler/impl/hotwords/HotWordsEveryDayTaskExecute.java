@@ -3,6 +3,7 @@ package cn.lili.consumer.timetask.handler.impl.hotwords;
 import cn.hutool.json.JSONUtil;
 import cn.lili.cache.Cache;
 import cn.lili.cache.CachePrefix;
+import cn.lili.cache.TypedTuple;
 import cn.lili.modules.search.entity.dos.HotWordsHistory;
 import cn.lili.modules.search.service.HotWordsHistoryService;
 import cn.lili.modules.system.entity.dos.Setting;
@@ -13,7 +14,6 @@ import cn.lili.modules.system.service.SettingService;
 import cn.lili.consumer.timetask.handler.EveryDayExecute;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.DefaultTypedTuple;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 
@@ -41,7 +41,7 @@ public class HotWordsEveryDayTaskExecute implements EveryDayExecute {
     @Override
     public void execute() {
         //获取大于0分的热词
-        Set<DefaultTypedTuple> tuples = cache.zRangeByScore(CachePrefix.HOT_WORD.getPrefix(), 1, Integer.MAX_VALUE);
+        Set<TypedTuple> tuples = cache.zRangeByScore(CachePrefix.HOT_WORD.getPrefix(), 1, Integer.MAX_VALUE);
         //如果任务不为空
         if (!CollectionUtils.isEmpty(tuples)) {
 
@@ -55,7 +55,7 @@ public class HotWordsEveryDayTaskExecute implements EveryDayExecute {
 
             //批量保存热词
             List<HotWordsHistory> hotWordsHistories = new ArrayList<>();
-            for (DefaultTypedTuple tuple : tuples) {
+            for (TypedTuple tuple : tuples) {
                 String keywords = (String) tuple.getValue();
                 Double score = tuple.getScore();
                 hotWordsHistories.add(new HotWordsHistory(keywords, score.intValue(), calendar.getTime()));

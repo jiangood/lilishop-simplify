@@ -2,11 +2,11 @@ package cn.lili.consumer.trigger;
 
 import cn.hutool.json.JSONUtil;
 import cn.lili.cache.Cache;
+import cn.lili.cache.TypedTuple;
 import cn.lili.common.utils.ThreadPoolUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationRunner;
-import org.springframework.data.redis.core.DefaultTypedTuple;
 import org.springframework.util.CollectionUtils;
 
 import java.util.Set;
@@ -37,13 +37,13 @@ public abstract class AbstractDelayQueueListen implements ApplicationRunner {
                 //获取当前时间的时间戳
                 long now = System.currentTimeMillis() / 1000;
                 //获取当前时间前需要执行的任务列表
-                Set<DefaultTypedTuple> tuples = cache.zRangeByScore(setDelayQueueName(), 0, now);
+                Set<TypedTuple> tuples = cache.zRangeByScore(setDelayQueueName(), 0, now);
 
                 //如果任务不为空
                 if (!CollectionUtils.isEmpty(tuples)) {
                     log.info("执行任务:{}", JSONUtil.toJsonStr(tuples));
 
-                    for (DefaultTypedTuple tuple : tuples) {
+                    for (TypedTuple tuple : tuples) {
                         String jobId = (String) tuple.getValue();
                         //移除缓存，如果移除成功则表示当前线程处理了延时任务，则执行延时任务
                         Long num = cache.zRemove(setDelayQueueName(), jobId);

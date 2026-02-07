@@ -1,11 +1,9 @@
 package cn.lili.cache;
 
 
-import org.springframework.data.redis.core.ZSetOperations;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -41,12 +39,7 @@ public interface Cache<T> {
      */
     List multiGet(Collection keys);
 
-    /**
-     * 批量set
-     *
-     * @param map 键值对
-     */
-    void multiSet(Map map);
+
 
 
     /**
@@ -98,45 +91,9 @@ public interface Cache<T> {
      */
     void vagueDel(Object key);
 
-    /**
-     * Clear the cache
-     */
-    void clear();
 
 
-    /**
-     * 往缓存中写入内容
-     *
-     * @param key       缓存key
-     * @param hashKey   缓存中hashKey
-     * @param hashValue hash值
-     */
-    void putHash(Object key, Object hashKey, Object hashValue);
 
-    /**
-     * 玩缓存中写入内容
-     *
-     * @param key 缓存key
-     * @param map map value
-     */
-    void putAllHash(Object key, Map map);
-
-    /**
-     * 读取缓存值
-     *
-     * @param key     缓存key
-     * @param hashKey map value
-     * @return 返回缓存中的数据
-     */
-    T getHash(Object key, Object hashKey);
-
-    /**
-     * 读取缓存值
-     *
-     * @param key 缓存key
-     * @return 缓存中的数据
-     */
-    Map<Object, Object> getHash(Object key);
 
     /**
      * 是否包含
@@ -155,13 +112,7 @@ public interface Cache<T> {
      */
     List<Object> keys(String pattern);
 
-    /**
-     * 原生阻塞keys 不推荐使用
-     *
-     * @param pattern 模糊key
-     * @return 缓存中的数据
-     */
-    List<Object> keysBlock(String pattern);
+
 
 
     //-----------------------------------------------用于特殊场景，redis去重计数---------------------------------------------
@@ -188,24 +139,7 @@ public interface Cache<T> {
      */
     Long counter(Object key);
 
-    /**
-     * 批量计数
-     *
-     * @param keys 要查询的key集合
-     * @return 批量计数
-     */
-    List multiCounter(Collection keys);
 
-    /**
-     * 计数器结果
-     * <p>
-     * 效率较高的 计数器 统计返回
-     * 如需清零，按照普通key 移除即可
-     *
-     * @param key key值
-     * @return 计数器结果
-     */
-    Long mergeCounter(Object... key);
     //---------------------------------------------------用于特殊场景，redis去重统计-----------------------------------------
 
     //-----------------------------------------------redis计数---------------------------------------------
@@ -228,6 +162,8 @@ public interface Cache<T> {
      * @return 计数器结果
      */
     Long incr(String key);
+
+    Long incrBy(String key, long increment);
     //-----------------------------------------------redis计数---------------------------------------------
 
     /**
@@ -255,22 +191,10 @@ public interface Cache<T> {
      * zrevrange方法无需担心用于指定范围的start和end出现越界报错问题
      *
      * @param sortedSetName sortedSetName
-     * @param start         查询范围开始位置
-     * @param end           查询范围结束位置
-     * @return 获取满足条件的集合
-     */
-    Set<ZSetOperations.TypedTuple<Object>> reverseRangeWithScores(String sortedSetName, Integer start, Integer end);
-
-    /**
-     * zrevrange命令, 查询Sorted Set中指定范围的值
-     * 返回的有序集合中，score大的在前面
-     * zrevrange方法无需担心用于指定范围的start和end出现越界报错问题
-     *
-     * @param sortedSetName sortedSetName
      * @param count         查询数量
      * @return 获取满足条件的集合
      */
-    Set<ZSetOperations.TypedTuple<Object>> reverseRangeWithScores(String sortedSetName, Integer count);
+    Set<TypedTuple<T>> reverseRangeWithScores(String sortedSetName, Integer count);
 
 
     /**
@@ -292,7 +216,7 @@ public interface Cache<T> {
      * @param to   结束时间
      * @return 数据
      */
-    Set<ZSetOperations.TypedTuple<Object>> zRangeByScore(String key, int from, long to);
+    Set<TypedTuple<T>> zRangeByScore(String key, int from, long to);
 
     /**
      * 移除 Zset队列值

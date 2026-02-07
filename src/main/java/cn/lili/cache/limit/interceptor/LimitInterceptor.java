@@ -5,17 +5,16 @@ import cn.lili.cache.limit.enums.LimitTypeEnums;
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.exception.ServiceException;
 import cn.lili.common.utils.IpUtils;
-import com.google.common.collect.ImmutableList;
+import com.google.common.util.concurrent.RateLimiter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
+
+import java.util.concurrent.TimeUnit;
 
 /**
  * 流量拦截
@@ -26,19 +25,9 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 @Configuration
 @Slf4j
 public class LimitInterceptor {
-    private StringRedisTemplate stringRedisTemplate;
 
-    private DefaultRedisScript<Long> limitScript;
 
-    @Autowired
-    public void setStringRedisTemplate(StringRedisTemplate stringRedisTemplate) {
-        this.stringRedisTemplate = stringRedisTemplate;
-    }
-
-    @Autowired
-    public void setLimitScript(DefaultRedisScript<Long> limitScript) {
-        this.limitScript = limitScript;
-    }
+    private Limiter limiter = new Limiter(1, TimeUnit.HOURS);
 
     @Before("@annotation(limitPointAnnotation)")
     public void interceptor(LimitPoint limitPointAnnotation) {
@@ -53,20 +42,19 @@ public class LimitInterceptor {
             key = limitPointAnnotation.key() + IpUtils
                     .getIpAddress(((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest());
         }
-        ImmutableList<String> keys = ImmutableList.of(StringUtils.join(limitPointAnnotation.prefix(), key));
+        String cacheKey = StringUtils.join(limitPointAnnotation.prefix(), key);
+
+
+
         try {
-            Long count = stringRedisTemplate.execute(
-                    limitScript,
-                    keys,
-                    String.valueOf(limitCount),
-                    String.valueOf(limitPeriod)
-            );
-            assert count != null;
-            log.info("限制请求{}, 当前请求{},缓存key{}", limitCount, count.intValue(), key);
+            boolean b = limiter.tryAcquire(cacheKey, limitCount, limitPeriod, TimeUnit.SECONDS);
+
+            log.info("限制请求{},缓存key{}", limitCount,  key);
             //如果缓存里没有值，或者他的值小于限制频率
-            if (count.intValue() > limitCount) {
+            if(!b){
                 throw new ServiceException(ResultCode.LIMIT_ERROR);
             }
+
         }
         //如果从redis中执行都值判定为空，则这里跳过
         catch (NullPointerException e) {

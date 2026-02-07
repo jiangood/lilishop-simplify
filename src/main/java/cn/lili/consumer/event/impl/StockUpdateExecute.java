@@ -22,8 +22,6 @@ import cn.lili.modules.promotion.service.PointsGoodsService;
 import cn.lili.modules.promotion.service.PromotionGoodsService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,13 +44,7 @@ public class StockUpdateExecute implements OrderStatusChangeEvent {
      * 出库失败消息
      */
     static String outOfStockMessage = "库存不足，出库失败";
-    /**
-     * Redis
-     */
-    @Autowired
-    private StringRedisTemplate stringRedisTemplate;
-    @Autowired
-    private DefaultRedisScript<Boolean> quantityScript;
+
     /**
      * 订单
      */
@@ -104,7 +96,8 @@ public class StockUpdateExecute implements OrderStatusChangeEvent {
                 checkStocks(stocks, order);
 
                 //库存扣除结果
-                Boolean skuResult = stringRedisTemplate.execute(quantityScript, keys, values.toArray());
+               // Boolean skuResult = stringRedisTemplate.execute(quantityScript, keys, values.toArray());
+                boolean skuResult = new QuantityScript(cache).execute(keys, values);
                 //如果库存扣减都成功，则记录成交订单
                 if (Boolean.TRUE.equals(skuResult)) {
                     log.info("库存扣减成功,参数为{};{}", keys, values);
@@ -137,7 +130,7 @@ public class StockUpdateExecute implements OrderStatusChangeEvent {
                         setPromotionStock(keys, values, orderItem, false);
                     }
                     //批量脚本执行库存回退
-                    Boolean skuResult = stringRedisTemplate.execute(quantityScript, keys, values.toArray());
+                    Boolean skuResult = new QuantityScript(cache).execute( keys, values);
 
                     //返还失败，则记录日志
                     if (Boolean.FALSE.equals(skuResult)) {
@@ -151,6 +144,8 @@ public class StockUpdateExecute implements OrderStatusChangeEvent {
                 break;
         }
     }
+
+
 
 
     /**

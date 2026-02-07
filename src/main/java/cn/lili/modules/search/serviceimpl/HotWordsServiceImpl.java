@@ -2,12 +2,12 @@ package cn.lili.modules.search.serviceimpl;
 
 import cn.lili.cache.Cache;
 import cn.lili.cache.CachePrefix;
+import cn.lili.cache.TypedTuple;
 import cn.lili.modules.search.entity.dos.HotWordsHistory;
 import cn.lili.modules.search.entity.dto.HotWordsDTO;
 import cn.lili.modules.search.service.HotWordsService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -37,11 +37,11 @@ public class HotWordsServiceImpl implements HotWordsService {
         List<String> hotWords = new ArrayList<>();
         // redis 排序中，下标从0开始，所以这里需要 -1 处理
         count = count - 1;
-        Set<ZSetOperations.TypedTuple<Object>> set = cache.reverseRangeWithScores(CachePrefix.HOT_WORD.getPrefix(), count);
+        Set<TypedTuple<Object>> set = cache.reverseRangeWithScores(CachePrefix.HOT_WORD.getPrefix(), count);
         if (set == null || set.isEmpty()) {
             return new ArrayList<>();
         }
-        for (ZSetOperations.TypedTuple<Object> defaultTypedTuple : set) {
+        for (TypedTuple<Object> defaultTypedTuple : set) {
             hotWords.add(Objects.requireNonNull(defaultTypedTuple.getValue()).toString());
         }
         return hotWords;
@@ -55,11 +55,11 @@ public class HotWordsServiceImpl implements HotWordsService {
         List<HotWordsHistory> hotWords = new ArrayList<>();
         // redis 排序中，下标从0开始，所以这里需要 -1 处理
         count = count - 1;
-        Set<ZSetOperations.TypedTuple<Object>> set = cache.reverseRangeWithScores(CachePrefix.HOT_WORD.getPrefix(), count);
+        Set<TypedTuple<Object>> set = cache.reverseRangeWithScores(CachePrefix.HOT_WORD.getPrefix(), count);
         if (set == null || set.isEmpty()) {
             return new ArrayList<>();
         }
-        for (ZSetOperations.TypedTuple<Object> defaultTypedTuple : set) {
+        for (TypedTuple<Object> defaultTypedTuple : set) {
             try {
                 hotWords.add(new HotWordsHistory(defaultTypedTuple.getValue().toString(),
                         defaultTypedTuple.getScore().intValue()));

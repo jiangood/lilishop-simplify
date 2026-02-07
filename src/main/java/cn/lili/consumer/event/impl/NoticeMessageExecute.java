@@ -1,7 +1,6 @@
 package cn.lili.consumer.event.impl;
 
 import cn.lili.consumer.event.*;
-import cn.lili.event.*;
 import cn.lili.modules.member.entity.dto.MemberPointMessage;
 import cn.lili.modules.member.entity.enums.PointTypeEnum;
 import cn.lili.modules.message.entity.dto.NoticeMessageDTO;
