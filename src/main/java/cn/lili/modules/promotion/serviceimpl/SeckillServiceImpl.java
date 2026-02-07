@@ -33,7 +33,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.rocketmq.spring.core.RocketMQTemplate;
+import cn.lili.common.message.queue.template.MessageQueueTemplate;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -66,16 +66,10 @@ public class SeckillServiceImpl extends AbstractPromotionsServiceImpl<SeckillMap
     private SeckillApplyService seckillApplyService;
 
     /**
-     * rocketMq配置
+     * MessageQueueTemplate
      */
     @Autowired
-    private RocketmqCustomProperties rocketmqCustomProperties;
-
-    /**
-     * rocketMq
-     */
-    @Autowired
-    private RocketMQTemplate rocketMQTemplate;
+    private MessageQueueTemplate messageQueueTemplate;
 
 
     @Override

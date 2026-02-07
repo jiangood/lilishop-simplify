@@ -23,7 +23,7 @@ import cn.lili.rocketmq.tags.MemberTagsEnum;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.google.gson.Gson;
-import org.apache.rocketmq.spring.core.RocketMQTemplate;
+import cn.lili.common.message.queue.template.MessageQueueTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -39,15 +39,10 @@ import java.util.List;
 public class MemberSignServiceImpl extends ServiceImpl<MemberSignMapper, MemberSign> implements MemberSignService {
 
     /**
-     * RocketMQ
+     * MessageQueueTemplate
      */
     @Autowired
-    private RocketMQTemplate rocketMQTemplate;
-    /**
-     * RocketMQ 配置
-     */
-    @Autowired
-    private RocketmqCustomProperties rocketmqCustomProperties;
+    private MessageQueueTemplate messageQueueTemplate;
     /**
      * 配置
      */
@@ -93,8 +88,8 @@ public class MemberSignServiceImpl extends ServiceImpl<MemberSignMapper, MemberS
             try {
                 this.baseMapper.insert(memberSign);
                 //签到成功后发送消息赠送积分
-                String destination = rocketmqCustomProperties.getMemberTopic() + ":" + MemberTagsEnum.MEMBER_SING.name();
-                rocketMQTemplate.asyncSend(destination, memberSign, RocketmqSendCallbackBuilder.commonCallback());
+                String destination = "member:" + "MEMBER_SIGN";
+                messageQueueTemplate.asyncSend(destination, memberSign);
                 return true;
             } catch (Exception e) {
                 throw new ServiceException(ResultCode.MEMBER_SIGN_REPEAT);

@@ -29,10 +29,7 @@ public class MemberTokenGenerate extends AbstractTokenGenerate<Member> {
     @Autowired
     private TokenUtil tokenUtil;
     @Autowired
-    private RocketmqCustomProperties rocketmqCustomProperties;
-
-    @Autowired
-    private RocketMQTemplate rocketMQTemplate;
+    private MessageQueueTemplate messageQueueTemplate;
 
     @Override
     public Token createToken(Member member, Boolean longTerm) {
@@ -54,9 +51,9 @@ public class MemberTokenGenerate extends AbstractTokenGenerate<Member> {
         //记录最后登录时间，客户端类型
         member.setLastLoginDate(new Date());
         member.setClientEnum(clientTypeEnum.name());
-        if (rocketMQTemplate != null) {
-            String destination = rocketmqCustomProperties.getMemberTopic() + ":" + MemberTagsEnum.MEMBER_LOGIN.name();
-            rocketMQTemplate.asyncSend(destination, member, RocketmqSendCallbackBuilder.commonCallback());
+        if (messageQueueTemplate != null) {
+            String destination = "member:" + "MEMBER_LOGIN";
+            messageQueueTemplate.asyncSend(destination, member);
         }
 
         AuthUser authUser = AuthUser.builder()

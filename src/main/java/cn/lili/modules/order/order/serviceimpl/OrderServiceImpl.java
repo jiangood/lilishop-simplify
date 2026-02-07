@@ -69,7 +69,7 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.util.CellRangeAddressList;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.apache.rocketmq.spring.core.RocketMQTemplate;
+import cn.lili.common.message.queue.template.MessageQueueTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
@@ -123,15 +123,10 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     @Autowired
     private OrderLogService orderLogService;
     /**
-     * RocketMQ
+     * MessageQueueTemplate
      */
     @Autowired
-    private RocketMQTemplate rocketMQTemplate;
-    /**
-     * RocketMQ配置
-     */
-    @Autowired
-    private RocketmqCustomProperties rocketmqCustomProperties;
+    private MessageQueueTemplate messageQueueTemplate;
     /**
      * 订单流水
      */
@@ -638,9 +633,9 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         }
         //发送商品购买消息
         if (!goodsCompleteMessageList.isEmpty()) {
-            String destination = rocketmqCustomProperties.getGoodsTopic() + ":" + GoodsTagsEnum.BUY_GOODS_COMPLETE.name();
+            String destination = "goods:" + "BUY_GOODS_COMPLETE";
             //发送订单变更mq消息
-            rocketMQTemplate.asyncSend(destination, JSONUtil.toJsonStr(goodsCompleteMessageList), RocketmqSendCallbackBuilder.commonCallback());
+            messageQueueTemplate.asyncSend(destination, JSONUtil.toJsonStr(goodsCompleteMessageList));
         }
     }
 
