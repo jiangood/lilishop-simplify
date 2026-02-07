@@ -20,5 +20,7 @@ https://gitee.com/beijing_hongye_huicheng/lilishop/commit/8fcc5ebfd3d6bf125b58b0
  ai：去掉mq，改为内存实现
 - 去掉xxl-job
 ## 去掉es
-ai： 去掉elasticsearch，必要的地方使用 Caffeine 替代
-     加入jpa依赖后继续
+ai： 
+加入jpa依赖
+新开窗口：去掉elasticsearch，直接查数据库即可
+     
