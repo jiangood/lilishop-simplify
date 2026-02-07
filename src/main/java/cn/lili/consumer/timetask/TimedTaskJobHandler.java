@@ -37,7 +37,7 @@ public class TimedTaskJobHandler {
      *
      * @throws Exception
      */
-    @Scheduled(cron = "0 * * * * ?")
+    @Scheduled(fixedDelay = 60000) // 使用 fixedDelay，以免任务并发
     public void everyMinuteExecute()  {
         log.info("每分钟任务执行");
         if (everyMinuteExecutes == null || everyMinuteExecutes.size() == 0) {
