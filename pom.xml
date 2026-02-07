@@ -62,34 +62,14 @@
 
 
     <dependencies>
-        <!--buyer-api use-->
-        <dependency>
-            <groupId>com.jfinal</groupId>
-            <artifactId>enjoy</artifactId>
-            <version>${enjoy.version}</version>
-        </dependency>
         <!-- im use-->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-websocket</artifactId>
         </dependency>
 
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-properties-migrator</artifactId>
-            <scope>runtime</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.junit.vintage</groupId>
-            <artifactId>junit-vintage-engine</artifactId>
-            <scope>test</scope>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.hamcrest</groupId>
-                    <artifactId>hamcrest-core</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
+
+
         <!--定时任务-->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -387,16 +367,8 @@
             <artifactId>esdk-obs-java</artifactId>
             <version>${huaweicloud-obs.version}</version>
         </dependency>
-        <dependency>
-            <groupId>com.qcloud</groupId>
-            <artifactId>cos_api</artifactId>
-            <version>${cos.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.tencentcloudapi</groupId>
-            <artifactId>tencentcloud-sdk-java</artifactId>
-            <version>${tencentcloud.version}</version>
-        </dependency>
+
+
         <dependency>
             <groupId>com.github.kuaidi100-api</groupId>
             <artifactId>sdk</artifactId>
