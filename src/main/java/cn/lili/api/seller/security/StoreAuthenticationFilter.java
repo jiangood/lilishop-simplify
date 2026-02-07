@@ -70,6 +70,7 @@ public class StoreAuthenticationFilter extends BasicAuthenticationFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws IOException,
             ServletException {
         if(!request.getRequestURI().startsWith("/store")){
+            chain.doFilter(request, response);
             return;
         }
         //从header中获取jwt

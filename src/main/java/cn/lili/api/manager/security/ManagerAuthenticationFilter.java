@@ -51,34 +51,23 @@ public class ManagerAuthenticationFilter extends BasicAuthenticationFilter {
 
     private final ManagerTokenGenerate managerTokenGenerate;
 
-    private final IgnoredUrlsProperties ignoredUrlsProperties;
 
     public ManagerAuthenticationFilter(AuthenticationManager authenticationManager,
                                        MenuService menuService,
                                        ManagerTokenGenerate managerTokenGenerate,
-                                       Cache cache,
-                                       IgnoredUrlsProperties ignoredUrlsProperties) {
+                                       Cache cache) {
         super(authenticationManager);
         this.cache = cache;
         this.menuService = menuService;
         this.managerTokenGenerate = managerTokenGenerate;
-        this.ignoredUrlsProperties = ignoredUrlsProperties;
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain chain) throws IOException, ServletException {
-
-        // 忽略无需鉴权的路径，直接放行
-        String requestUri = request.getRequestURI();
-        for (String url : ignoredUrlsProperties.getUrls()) {
-            if (PatternMatchUtils.simpleMatch(url, requestUri)) {
-                chain.doFilter(request, response);
-                return;
-            }
-        }
         if(!request.getRequestURI().startsWith("/manager")){
+            chain.doFilter(request, response);
             return;
         }
 

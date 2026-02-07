@@ -28,7 +28,6 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfigurationSource;
 
 
-
 @Slf4j
 @Configuration
 @EnableWebSecurity
@@ -54,7 +53,6 @@ public class GlobalSecurityConfig {
     private CorsConfigurationSource corsConfigurationSource;
 
 
-
     @Autowired
     private StoreTokenGenerate storeTokenGenerate;
 
@@ -73,6 +71,7 @@ public class GlobalSecurityConfig {
     // 新增：用于获取 AuthenticationManager
     @Autowired
     private AuthenticationConfiguration authenticationConfiguration;
+
     /**
      * 配置安全过滤器链
      */
@@ -80,47 +79,44 @@ public class GlobalSecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         // 配置不需要授权的URL
         String[] ignoredUrls = ignoredUrlsProperties.getUrls().toArray(new String[0]);
-        
-        http
-            // 配置授权规则
-            .authorizeHttpRequests(authz -> authz
+
+        AuthenticationManager authenticationManager = authenticationConfiguration.getAuthenticationManager();
+        // 配置授权规则
+        http.authorizeHttpRequests(authz -> authz
                 // 配置的url不需要授权
                 .requestMatchers(ignoredUrls).permitAll()
                 // 任何其他请求都需要身份认证
                 .anyRequest().authenticated()
-            )
-            // 禁止网页iframe
-            .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::disable))
-            // 配置登出
-            .logout(LogoutConfigurer::permitAll)
-            // 允许跨域
-            .cors(cors -> cors.configurationSource(corsConfigurationSource))
-            // 关闭跨站请求防护
-            .csrf(AbstractHttpConfigurer::disable)
-            // 前后端分离采用JWT，不需要session
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            // 自定义权限拒绝处理类
-            .exceptionHandling(exception -> exception
+        );
+        // 禁止网页iframe
+        http.headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::disable));
+        // 配置登出
+        http.logout(LogoutConfigurer::permitAll);
+
+        // 允许跨域
+        http.cors(cors -> cors.configurationSource(corsConfigurationSource));
+        // 关闭跨站请求防护
+        http.csrf(AbstractHttpConfigurer::disable);
+        // 前后端分离采用JWT，不需要session
+        http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+        // 自定义权限拒绝处理类
+        http.exceptionHandling(exception -> exception
                 .accessDeniedHandler(accessDeniedHandler)
                 .authenticationEntryPoint((req, res, ex) ->
-                    cn.lili.common.utils.ResponseUtil.output(res, 403,
-                        cn.lili.common.utils.ResponseUtil.resultMap(false, 403, "未登录或token失效"))
+                        cn.lili.common.utils.ResponseUtil.output(res, 403,
+                                cn.lili.common.utils.ResponseUtil.resultMap(false, 403, "未登录或token失效"))
                 )
-            )
-            // 禁用表单与Basic认证
-            .formLogin(AbstractHttpConfigurer::disable)
-            .httpBasic(AbstractHttpConfigurer::disable)
-            // 添加JWT认证过滤器
-            .addFilter(new BuyerAuthenticationFilter(authenticationManager(authenticationConfiguration()), cache))
-            .addFilter(new StoreAuthenticationFilter(authenticationManager(authenticationConfiguration()), storeTokenGenerate, storeMenuRoleService, clerkService, cache))
-        // 添加 JWT 认证过滤器（保持你原有的构造参数）
-       .addFilter(new ManagerAuthenticationFilter(
-                authenticationConfiguration.getAuthenticationManager(),
-                menuService,
-                managerTokenGenerate,
-                cache,
-                ignoredUrlsProperties
-        ));
+        );
+
+
+        // 禁用表单与Basic认证
+        http.formLogin(AbstractHttpConfigurer::disable);
+        http.httpBasic(AbstractHttpConfigurer::disable);
+        // 添加JWT认证过滤器
+        http.addFilter(new BuyerAuthenticationFilter(authenticationManager, cache));
+        http.addFilter(new StoreAuthenticationFilter(authenticationManager, storeTokenGenerate, storeMenuRoleService, clerkService, cache));
+        http.addFilter(new ManagerAuthenticationFilter(authenticationManager, menuService, managerTokenGenerate, cache));
+
 
         return http.build();
     }
@@ -132,7 +128,6 @@ public class GlobalSecurityConfig {
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
         return authenticationConfiguration.getAuthenticationManager();
     }
-
 
 
     /**
