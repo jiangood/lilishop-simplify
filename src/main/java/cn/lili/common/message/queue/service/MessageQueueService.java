@@ -28,7 +28,7 @@ public class MessageQueueService  {
         MessageQueue messageQueue = new MessageQueue();
         messageQueue.setTopic(topic);
         messageQueue.setTag(tag);
-        messageQueue.setMessage(JSONUtil.toJsonStr(message));
+        messageQueue.setBody(JSONUtil.toJsonStr(message));
         messageQueue.setStatus(0);
         messageQueueRepository.save(messageQueue);
     }

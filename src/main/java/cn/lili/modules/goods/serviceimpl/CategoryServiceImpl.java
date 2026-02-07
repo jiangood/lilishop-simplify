@@ -4,9 +4,8 @@ import cn.hutool.core.text.CharSequenceUtil;
 import cn.lili.cache.Cache;
 import cn.lili.cache.CachePrefix;
 import cn.lili.common.enums.ResultCode;
-import cn.lili.common.event.TransactionCommitSendMQEvent;
+import cn.lili.common.event.TransactionCommitSendMessageEvent;
 import cn.lili.common.exception.ServiceException;
-import cn.lili.common.properties.RocketmqCustomProperties;
 import cn.lili.modules.goods.entity.dos.Category;
 import cn.lili.modules.goods.entity.dto.CategorySearchParams;
 import cn.lili.modules.goods.entity.vos.CategoryVO;
@@ -259,8 +258,8 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> i
         updateWrapper.eq("id", category.getId());
         this.baseMapper.update(category, updateWrapper);
         removeCache();
-        applicationEventPublisher.publishEvent(new TransactionCommitSendMQEvent("同步商品分类名称",
-                rocketmqCustomProperties.getGoodsTopic(), GoodsTagsEnum.CATEGORY_GOODS_NAME.name(), category.getId()));
+        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("同步商品分类名称", "goods-topic",
+               GoodsTagsEnum.CATEGORY_GOODS_NAME.name(), category.getId()));
     }
 
 

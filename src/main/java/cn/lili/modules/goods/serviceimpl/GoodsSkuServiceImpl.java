@@ -7,7 +7,7 @@ import cn.lili.cache.Cache;
 import cn.lili.cache.CachePrefix;
 import cn.lili.common.enums.PromotionTypeEnum;
 import cn.lili.common.enums.ResultCode;
-import cn.lili.common.event.TransactionCommitSendMQEvent;
+import cn.lili.common.event.TransactionCommitSendMessageEvent;
 import cn.lili.common.event.TransactionCommitSendMessageEvent;
 import cn.lili.common.exception.ServiceException;
 
@@ -414,12 +414,12 @@ public class GoodsSkuServiceImpl extends ServiceImpl<GoodsSkuMapper, GoodsSku> i
         boolean update = this.update(updateWrapper);
         if (Boolean.TRUE.equals(update)) {
             if (GoodsStatusEnum.UPPER.name().equals(marketEnable)) {
-                applicationEventPublisher.publishEvent(new TransactionCommitSendMQEvent("生成店铺商品",
+                applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("生成店铺商品",
                         "goods", "GENERATOR_STORE_GOODS_INDEX",
                         storeId));
             } else if (GoodsStatusEnum.DOWN.name().equals(marketEnable)) {
                 cache.vagueDel(CachePrefix.GOODS_SKU.getPrefix());
-                applicationEventPublisher.publishEvent(new TransactionCommitSendMQEvent("删除店铺商品",
+                applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("删除店铺商品",
                         "goods", "STORE_GOODS_DELETE", storeId));
             }
         }

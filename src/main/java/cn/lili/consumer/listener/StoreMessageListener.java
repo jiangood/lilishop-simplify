@@ -1,13 +1,12 @@
 package cn.lili.consumer.listener;
 
 import cn.hutool.json.JSONUtil;
+import cn.lili.common.message.queue.entity.MessageQueue;
+import cn.lili.common.message.queue.listener.MessageQueueListener;
 import cn.lili.consumer.event.StoreSettingChangeEvent;
 import cn.lili.modules.store.entity.dos.Store;
 import cn.lili.rocketmq.tags.StoreTagsEnum;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.rocketmq.common.message.MessageExt;
-import org.apache.rocketmq.spring.annotation.RocketMQMessageListener;
-import org.apache.rocketmq.spring.core.RocketMQListener;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -20,14 +19,19 @@ import java.util.List;
  */
 @Component
 @Slf4j
-@RocketMQMessageListener(topic = "${lili.data.rocketmq.store-topic}", consumerGroup = "${lili.data.rocketmq.store-group}")
-public class StoreMessageListener implements RocketMQListener<MessageExt> {
+public class StoreMessageListener implements MessageQueueListener {
+
+    @Override
+    public String getTopic() {
+        return "store-topic";
+    }
+
     @Autowired
     private List<StoreSettingChangeEvent> storeSettingChangeEventList;
 
     @Override
-    public void onMessage(MessageExt messageExt) {
-        switch (StoreTagsEnum.valueOf(messageExt.getTags())){
+    public void onMessage(MessageQueue messageExt) {
+        switch (StoreTagsEnum.valueOf(messageExt.getTag())){
             //修改店铺
             case EDIT_STORE_SETTING:
                 for (StoreSettingChangeEvent storeSettingChangeEvent : storeSettingChangeEventList) {

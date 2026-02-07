@@ -2,12 +2,12 @@ package cn.lili.consumer.trigger;
 
 import cn.hutool.json.JSONUtil;
 import cn.lili.cache.Cache;
+import cn.lili.common.message.queue.entity.MessageQueue;
+import cn.lili.common.message.queue.listener.MessageQueueListener;
 import cn.lili.trigger.model.TimeTriggerMsg;
 import cn.lili.trigger.util.DelayQueueTools;
 import cn.lili.common.utils.SpringContextUtil;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.rocketmq.spring.annotation.RocketMQMessageListener;
-import org.apache.rocketmq.spring.core.RocketMQListener;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -19,13 +19,18 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @Slf4j
-@RocketMQMessageListener(topic = "${lili.data.rocketmq.promotion-topic}", consumerGroup = "${lili.data.rocketmq.promotion-group}")
-public class TimeTriggerConsumer implements RocketMQListener<TimeTriggerMsg> {
+public class TimeTriggerConsumer implements MessageQueueListener {
     @Autowired
     private Cache<Integer> cache;
 
     @Override
-    public void onMessage(TimeTriggerMsg timeTriggerMsg) {
+    public String getTopic() {
+        return "promotion-topic";
+    }
+
+    @Override
+    public void onMessage(MessageQueue messageQueue) {
+        TimeTriggerMsg timeTriggerMsg = JSONUtil.toBean(messageQueue.getBody(), TimeTriggerMsg.class);
         try {
             String key = DelayQueueTools.generateKey(timeTriggerMsg.getTriggerExecutor(), timeTriggerMsg.getTriggerTime(), timeTriggerMsg.getUniqueKey());
 

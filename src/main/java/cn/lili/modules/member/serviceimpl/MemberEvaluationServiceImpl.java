@@ -6,9 +6,8 @@ import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.json.JSONUtil;
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.enums.SwitchEnum;
-import cn.lili.common.event.TransactionCommitSendMQEvent;
+import cn.lili.common.event.TransactionCommitSendMessageEvent;
 import cn.lili.common.exception.ServiceException;
-import cn.lili.common.properties.RocketmqCustomProperties;
 import cn.lili.common.security.context.UserContext;
 import cn.lili.common.security.enums.UserEnums;
 import cn.lili.common.sensitive.SensitiveWordsFilter;
@@ -79,11 +78,7 @@ public class MemberEvaluationServiceImpl extends ServiceImpl<MemberEvaluationMap
      */
     @Autowired
     private GoodsSkuService goodsSkuService;
-    /**
-     * rocketMq配置
-     */
-    @Autowired
-    private RocketmqCustomProperties rocketmqCustomProperties;
+
 
     @Autowired
     private ApplicationEventPublisher applicationEventPublisher;
@@ -149,8 +144,8 @@ public class MemberEvaluationServiceImpl extends ServiceImpl<MemberEvaluationMap
         //修改订单货物评价状态为已评价
         orderItemService.updateCommentStatus(orderItem.getSn(), CommentStatusEnum.FINISHED);
         //发送商品评价消息
-        applicationEventPublisher.publishEvent(new TransactionCommitSendMQEvent("同步商品评价消息",
-                rocketmqCustomProperties.getGoodsTopic(), GoodsTagsEnum.GOODS_COMMENT_COMPLETE.name(), JSONUtil.toJsonStr(memberEvaluation)));
+        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("同步商品评价消息",
+                "goods-topic", GoodsTagsEnum.GOODS_COMMENT_COMPLETE.name(), JSONUtil.toJsonStr(memberEvaluation)));
         return memberEvaluationDTO;
     }
 

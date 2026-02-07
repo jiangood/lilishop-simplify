@@ -3,7 +3,7 @@ package cn.lili.modules.wallet.serviceimpl;
 
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.exception.ServiceException;
-import cn.lili.common.properties.RocketmqCustomProperties;
+import cn.lili.common.message.queue.template.MessageQueueTemplate;
 import cn.lili.common.utils.StringUtils;
 import cn.lili.common.vo.PageVO;
 import cn.lili.modules.wallet.entity.dos.MemberWithdrawApply;
@@ -15,12 +15,10 @@ import cn.lili.modules.wallet.mapper.MemberWithdrawApplyMapper;
 import cn.lili.modules.wallet.service.MemberWalletService;
 import cn.lili.modules.wallet.service.MemberWithdrawApplyService;
 import cn.lili.mybatis.util.PageUtil;
-import cn.lili.rocketmq.RocketmqSendCallbackBuilder;
 import cn.lili.rocketmq.tags.MemberTagsEnum;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import org.apache.rocketmq.spring.core.RocketMQTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -39,9 +37,7 @@ import java.util.Date;
 public class MemberWithdrawApplyServiceImpl extends ServiceImpl<MemberWithdrawApplyMapper, MemberWithdrawApply> implements MemberWithdrawApplyService {
 
     @Autowired
-    private RocketMQTemplate rocketMQTemplate;
-    @Autowired
-    private RocketmqCustomProperties rocketmqCustomProperties;
+    private MessageQueueTemplate messageQueueTemplate;
 
     /**
      * 会员余额
@@ -81,8 +77,8 @@ public class MemberWithdrawApplyServiceImpl extends ServiceImpl<MemberWithdrawAp
             memberWithdrawalMessage.setMemberId(memberWithdrawApply.getMemberId());
             memberWithdrawalMessage.setPrice(memberWithdrawApply.getApplyMoney());
 
-            String destination = rocketmqCustomProperties.getMemberTopic() + ":" + MemberTagsEnum.MEMBER_WITHDRAWAL.name();
-            rocketMQTemplate.asyncSend(destination, memberWithdrawalMessage, RocketmqSendCallbackBuilder.commonCallback());
+            String destination = "member-topic" + ":" + MemberTagsEnum.MEMBER_WITHDRAWAL.name();
+            messageQueueTemplate.asyncSend(destination, memberWithdrawalMessage);
             return true;
         }
         throw new ServiceException(ResultCode.WALLET_APPLY_ERROR);

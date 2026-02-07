@@ -11,7 +11,6 @@ import com.alibaba.fastjson2.JSON;
 import cn.lili.common.enums.PromotionTypeEnum;
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.exception.ServiceException;
-import cn.lili.common.properties.RocketmqCustomProperties;
 import cn.lili.modules.promotion.entity.dos.Seckill;
 import cn.lili.modules.promotion.entity.dos.SeckillApply;
 import cn.lili.modules.promotion.entity.dto.search.SeckillSearchParams;
@@ -25,7 +24,6 @@ import cn.lili.modules.system.entity.dos.Setting;
 import cn.lili.modules.system.entity.dto.SeckillSetting;
 import cn.lili.modules.system.entity.enums.SettingEnum;
 import cn.lili.modules.system.service.SettingService;
-import cn.lili.rocketmq.RocketmqSendCallbackBuilder;
 import cn.lili.rocketmq.tags.GoodsTagsEnum;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -194,9 +192,9 @@ public class SeckillServiceImpl extends AbstractPromotionsServiceImpl<SeckillMap
     public void deleteEsGoodsSeckill(Seckill seckill, List<String> skuIds) {
         Map<Object, Object> build = MapBuilder.create().put("promotionKey", this.getPromotionType() + "-" + seckill.getId()).put("scopeId", ArrayUtil.join(skuIds.toArray(), ",")).build();
         //删除商品促销消息
-        String destination = rocketmqCustomProperties.getGoodsTopic() + ":" + GoodsTagsEnum.DELETE_GOODS_INDEX_PROMOTIONS.name();
+        String destination = "goods_topic" + ":" + GoodsTagsEnum.DELETE_GOODS_INDEX_PROMOTIONS.name();
         //发送mq消息
-        rocketMQTemplate.asyncSend(destination, JSON.toJSONString(build), RocketmqSendCallbackBuilder.commonCallback());
+        messageQueueTemplate.asyncSend(destination, JSON.toJSONString(build));
     }
 
     @Override

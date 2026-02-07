@@ -7,7 +7,6 @@ import cn.lili.cache.CachePrefix;
 import cn.lili.common.enums.PromotionTypeEnum;
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.exception.ServiceException;
-import cn.lili.common.properties.RocketmqCustomProperties;
 import cn.lili.common.security.AuthUser;
 import cn.lili.modules.member.service.MemberService;
 import cn.lili.modules.promotion.entity.dos.Coupon;
@@ -72,11 +71,6 @@ public class CouponActivityServiceImpl extends AbstractPromotionsServiceImpl<Cou
      */
     @Autowired
     private TimeTrigger timeTrigger;
-    /**
-     * RocketMQ
-     */
-    @Autowired
-    private RocketmqCustomProperties rocketmqCustomProperties;
 
     @Override
     public CouponActivityVO getCouponActivityVO(String couponActivityId) {
@@ -97,7 +91,7 @@ public class CouponActivityServiceImpl extends AbstractPromotionsServiceImpl<Cou
                 couponActivity.getStartTime().getTime(),
                 CouponActivityMessage.builder().couponActivityId(couponActivity.getId()).build(),
                 DelayQueueTools.wrapperUniqueKey(DelayTypeEnums.COUPON_ACTIVITY, couponActivity.getId()),
-                rocketmqCustomProperties.getPromotionTopic());
+                "promotion-topic");
         //发送促销活动开始的延时任务
         timeTrigger.addDelay(timeTriggerMsg);
     }

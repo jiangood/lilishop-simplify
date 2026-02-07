@@ -5,9 +5,8 @@ import cn.hutool.core.text.CharSequenceUtil;
 import com.alibaba.fastjson2.JSON;
 import cn.lili.common.enums.PromotionTypeEnum;
 import cn.lili.common.enums.ResultCode;
-import cn.lili.common.event.TransactionCommitSendMQEvent;
+import cn.lili.common.event.TransactionCommitSendMessageEvent;
 import cn.lili.common.exception.ServiceException;
-import cn.lili.common.properties.RocketmqCustomProperties;
 import cn.lili.common.utils.DateUtil;
 import cn.lili.common.vo.PageVO;
 import cn.lili.modules.goods.entity.dos.GoodsSku;
@@ -80,8 +79,7 @@ public class CouponServiceImpl extends AbstractPromotionsServiceImpl<CouponMappe
     @Autowired
     private CouponActivityItemService couponActivityItemService;
 
-    @Autowired
-    private RocketmqCustomProperties rocketmqCustomProperties;
+
 
     @Autowired
     private ApplicationEventPublisher applicationEventPublisher;
@@ -295,7 +293,7 @@ public class CouponServiceImpl extends AbstractPromotionsServiceImpl<CouponMappe
                 build.put("scopeId", promotions.getScopeId());
             }
             //删除商品促销消息
-            applicationEventPublisher.publishEvent(new TransactionCommitSendMQEvent("删除商品促销事件", rocketmqCustomProperties.getGoodsTopic(), GoodsTagsEnum.DELETE_GOODS_INDEX_PROMOTIONS.name(), JSON.toJSONString(build)));
+            applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("删除商品促销事件", "goods-topic", GoodsTagsEnum.DELETE_GOODS_INDEX_PROMOTIONS.name(), JSON.toJSONString(build)));
         } else {
             super.sendUpdateEsGoodsMsg(promotions);
         }

@@ -37,7 +37,7 @@ public class MessageQueue implements Serializable {
      * Message content (JSON format)
      */
     @Column(columnDefinition = "TEXT")
-    private String message;
+    private String body;
 
     /**
      * Message status

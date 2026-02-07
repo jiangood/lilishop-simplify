@@ -2,6 +2,8 @@ package cn.lili.consumer.listener;
 
 import cn.hutool.json.JSONUtil;
 import cn.lili.common.enums.SwitchEnum;
+import cn.lili.common.message.queue.entity.MessageQueue;
+import cn.lili.common.message.queue.listener.MessageQueueListener;
 import cn.lili.common.vo.PageVO;
 import cn.lili.modules.member.entity.vo.MemberSearchVO;
 import cn.lili.modules.member.entity.vo.MemberVO;
@@ -21,9 +23,6 @@ import cn.lili.modules.store.service.StoreService;
 import cn.lili.rocketmq.tags.OtherTagsEnum;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import org.apache.rocketmq.common.message.MessageExt;
-import org.apache.rocketmq.spring.annotation.RocketMQMessageListener;
-import org.apache.rocketmq.spring.core.RocketMQListener;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -37,8 +36,11 @@ import java.util.List;
  * @since 2020/12/9
  */
 @Component
-@RocketMQMessageListener(topic = "${lili.data.rocketmq.notice-send-topic}", consumerGroup = "${lili.data.rocketmq.notice-send-group}")
-public class NoticeSendMessageListener implements RocketMQListener<MessageExt> {
+public class NoticeSendMessageListener implements MessageQueueListener {
+    @Override
+    public String getTopic() {
+        return "notice-send-topic";
+    }
 
     /**
      * 短信
@@ -67,8 +69,8 @@ public class NoticeSendMessageListener implements RocketMQListener<MessageExt> {
     private MemberService memberService;
 
     @Override
-    public void onMessage(MessageExt messageExt) {
-        switch (OtherTagsEnum.valueOf(messageExt.getTags())) {
+    public void onMessage(MessageQueue messageExt) {
+        switch (OtherTagsEnum.valueOf(messageExt.getTag())) {
             case SMS:
                 String smsJsonStr = new String(messageExt.getBody());
                 SmsReachDTO smsReachDTO = JSONUtil.toBean(smsJsonStr, SmsReachDTO.class);

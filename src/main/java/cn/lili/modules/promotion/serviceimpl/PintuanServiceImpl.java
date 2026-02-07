@@ -4,7 +4,6 @@ import cn.hutool.core.text.CharSequenceUtil;
 import cn.lili.common.enums.PromotionTypeEnum;
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.exception.ServiceException;
-import cn.lili.common.properties.RocketmqCustomProperties;
 import cn.lili.modules.goods.service.GoodsSkuService;
 import cn.lili.modules.member.entity.dos.Member;
 import cn.lili.modules.member.service.MemberService;
@@ -72,11 +71,7 @@ public class PintuanServiceImpl extends AbstractPromotionsServiceImpl<PintuanMap
     @Autowired
     private TimeTrigger timeTrigger;
 
-    /**
-     * RocketMQ
-     */
-    @Autowired
-    private RocketmqCustomProperties rocketmqCustomProperties;
+
 
     /**
      * 获取当前拼团的会员
@@ -173,7 +168,7 @@ public class PintuanServiceImpl extends AbstractPromotionsServiceImpl<PintuanMap
                     promotions.getEndTime().getTime(),
                     promotions,
                     DelayQueueTools.wrapperUniqueKey(DelayTypeEnums.PINTUAN_ORDER, (promotions.getId())),
-                    rocketmqCustomProperties.getPromotionTopic());
+                    "promotion-topic");
             //发送促销活动开始的延时任务
             this.timeTrigger.addDelay(timeTriggerMsg);
         }

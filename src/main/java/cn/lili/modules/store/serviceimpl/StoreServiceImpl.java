@@ -6,7 +6,7 @@ import cn.lili.cache.Cache;
 import cn.lili.cache.CachePrefix;
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.exception.ServiceException;
-import cn.lili.common.properties.RocketmqCustomProperties;
+import cn.lili.common.message.queue.template.MessageQueueTemplate;
 import cn.lili.common.security.AuthUser;
 import cn.lili.common.security.context.UserContext;
 import cn.lili.common.security.enums.UserEnums;
@@ -33,7 +33,6 @@ import cn.lili.modules.store.mapper.StoreMapper;
 import cn.lili.modules.store.service.StoreDetailService;
 import cn.lili.modules.store.service.StoreService;
 import cn.lili.mybatis.util.PageUtil;
-import cn.lili.rocketmq.RocketmqSendCallbackBuilder;
 import cn.lili.rocketmq.tags.StoreTagsEnum;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -41,7 +40,6 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import org.apache.rocketmq.spring.core.RocketMQTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -89,11 +87,9 @@ public class StoreServiceImpl extends ServiceImpl<StoreMapper, Store> implements
     @Lazy
     private StoreDetailService storeDetailService;
 
-    @Autowired
-    private RocketmqCustomProperties rocketmqCustomProperties;
 
     @Autowired
-    private RocketMQTemplate rocketMQTemplate;
+    private MessageQueueTemplate messageQueueTemplate;
 
     @Autowired
     @Lazy
@@ -186,9 +182,9 @@ public class StoreServiceImpl extends ServiceImpl<StoreMapper, Store> implements
             if (result) {
                 storeDetailService.updateStoreGoodsInfo(store);
             }
-            String destination = rocketmqCustomProperties.getStoreTopic() + ":" + StoreTagsEnum.EDIT_STORE_SETTING.name();
+            String destination = "store-topic" + ":" + StoreTagsEnum.EDIT_STORE_SETTING.name();
             //发送订单变更mq消息
-            rocketMQTemplate.asyncSend(destination, store, RocketmqSendCallbackBuilder.commonCallback());
+            messageQueueTemplate.asyncSend(destination, store);
         }
 
         cache.remove(CachePrefix.STORE.getPrefix() + storeEditDTO.getStoreId());

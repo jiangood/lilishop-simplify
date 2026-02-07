@@ -2,15 +2,14 @@ package cn.lili.consumer.listener;
 
 import cn.hutool.json.JSONUtil;
 import cn.lili.cache.Cache;
+import cn.lili.common.message.queue.entity.MessageQueue;
+import cn.lili.common.message.queue.listener.MessageQueueListener;
 import cn.lili.consumer.event.OrderStatusChangeEvent;
 import cn.lili.consumer.event.TradeEvent;
 import cn.lili.modules.order.cart.entity.dto.TradeDTO;
 import cn.lili.modules.order.order.entity.dto.OrderMessage;
 import cn.lili.rocketmq.tags.OrderTagsEnum;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.rocketmq.common.message.MessageExt;
-import org.apache.rocketmq.spring.annotation.RocketMQMessageListener;
-import org.apache.rocketmq.spring.core.RocketMQListener;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -24,8 +23,12 @@ import java.util.List;
  **/
 @Component
 @Slf4j
-@RocketMQMessageListener(topic = "${lili.data.rocketmq.order-topic}", consumerGroup = "${lili.data.rocketmq.order-group}")
-public class OrderMessageListener implements RocketMQListener<MessageExt> {
+public class OrderMessageListener implements MessageQueueListener {
+
+    @Override
+    public String getTopic() {
+        return "order-topic";
+    }
 
     /**
      * 交易
@@ -44,7 +47,7 @@ public class OrderMessageListener implements RocketMQListener<MessageExt> {
     private Cache<Object> cache;
 
     @Override
-    public void onMessage(MessageExt messageExt) {
+    public void onMessage(MessageQueue messageExt) {
         try {
             this.orderStatusEvent(messageExt);
         } catch (Exception e) {
@@ -56,9 +59,9 @@ public class OrderMessageListener implements RocketMQListener<MessageExt> {
      * 订单状态变更
      * @param messageExt
      */
-    public void orderStatusEvent(MessageExt messageExt) {
+    public void orderStatusEvent(MessageQueue messageExt) {
 
-        switch (OrderTagsEnum.valueOf(messageExt.getTags())) {
+        switch (OrderTagsEnum.valueOf(messageExt.getTag())) {
             //订单创建
             case ORDER_CREATE:
                 String key = new String(messageExt.getBody());

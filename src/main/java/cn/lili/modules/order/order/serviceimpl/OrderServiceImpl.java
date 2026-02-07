@@ -12,9 +12,8 @@ import cn.hutool.poi.excel.ExcelWriter;
 import cn.lili.common.enums.ClientTypeEnum;
 import cn.lili.common.enums.PromotionTypeEnum;
 import cn.lili.common.enums.ResultCode;
-import cn.lili.common.event.TransactionCommitSendMQEvent;
+import cn.lili.common.event.TransactionCommitSendMessageEvent;
 import cn.lili.common.exception.ServiceException;
-import cn.lili.common.properties.RocketmqCustomProperties;
 import cn.lili.common.security.OperationalJudgment;
 import cn.lili.common.security.context.UserContext;
 import cn.lili.common.security.enums.UserEnums;
@@ -47,8 +46,6 @@ import cn.lili.modules.system.entity.vo.Traces;
 import cn.lili.modules.system.service.LogisticsService;
 import cn.lili.modules.system.service.SettingService;
 import cn.lili.mybatis.util.PageUtil;
-import cn.lili.rocketmq.RocketmqSendCallbackBuilder;
-import cn.lili.rocketmq.tags.GoodsTagsEnum;
 import cn.lili.rocketmq.tags.OrderTagsEnum;
 import cn.lili.trigger.enums.DelayTypeEnums;
 import cn.lili.trigger.interfaces.TimeTrigger;
@@ -648,7 +645,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void sendUpdateStatusMessage(OrderMessage orderMessage) {
-        applicationEventPublisher.publishEvent(new TransactionCommitSendMQEvent("发送订单变更mq消息", rocketmqCustomProperties.getOrderTopic(),
+        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("发送订单变更mq消息", "order-topic",
                 OrderTagsEnum.STATUS_CHANGE.name(), JSONUtil.toJsonStr(orderMessage)));
     }
 
@@ -1052,7 +1049,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
                     startTime,
                     pintuanOrderMessage,
                     DelayQueueTools.wrapperUniqueKey(DelayTypeEnums.PINTUAN_ORDER, (pintuanId + parentOrderSn)),
-                    rocketmqCustomProperties.getPromotionTopic());
+                    "promotion-topic");
 
             this.timeTrigger.addDelay(timeTriggerMsg);
         }

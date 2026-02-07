@@ -1,14 +1,11 @@
 package cn.lili.modules.sms.serviceimpl;
 
 import cn.hutool.json.JSONUtil;
-import cn.lili.common.properties.RocketmqCustomProperties;
 import cn.lili.common.utils.BeanUtil;
 import cn.lili.modules.sms.entity.dos.SmsReach;
 import cn.lili.modules.sms.entity.dto.SmsReachDTO;
 import cn.lili.modules.sms.mapper.SmsReachMapper;
 import cn.lili.modules.sms.service.SmsReachService;
-import cn.lili.rocketmq.RocketmqSendCallbackBuilder;
-import cn.lili.rocketmq.tags.OtherTagsEnum;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import cn.lili.common.message.queue.template.MessageQueueTemplate;
 import org.springframework.beans.factory.annotation.Autowired;

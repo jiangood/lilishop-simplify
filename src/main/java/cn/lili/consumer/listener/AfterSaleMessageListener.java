@@ -1,13 +1,12 @@
 package cn.lili.consumer.listener;
 
 import cn.hutool.json.JSONUtil;
+import cn.lili.common.message.queue.entity.MessageQueue;
+import cn.lili.common.message.queue.listener.MessageQueueListener;
 import cn.lili.consumer.event.AfterSaleStatusChangeEvent;
 import cn.lili.modules.order.aftersale.entity.dos.AfterSale;
 import cn.lili.rocketmq.tags.AfterSaleTagsEnum;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.rocketmq.common.message.MessageExt;
-import org.apache.rocketmq.spring.annotation.RocketMQMessageListener;
-import org.apache.rocketmq.spring.core.RocketMQListener;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -20,8 +19,11 @@ import java.util.List;
  */
 @Slf4j
 @Component
-@RocketMQMessageListener(topic = "${lili.data.rocketmq.after-sale-topic}", consumerGroup = "${lili.data.rocketmq.after-sale-group}")
-public class AfterSaleMessageListener implements RocketMQListener<MessageExt> {
+public class AfterSaleMessageListener implements MessageQueueListener {
+    @Override
+    public String getTopic() {
+        return "after-sale-topic";
+    }
 
     /**
      * 售后订单状态
@@ -30,8 +32,8 @@ public class AfterSaleMessageListener implements RocketMQListener<MessageExt> {
     private List<AfterSaleStatusChangeEvent> afterSaleStatusChangeEvents;
 
     @Override
-    public void onMessage(MessageExt messageExt) {
-        if (AfterSaleTagsEnum.valueOf(messageExt.getTags()) == AfterSaleTagsEnum.AFTER_SALE_STATUS_CHANGE) {
+    public void onMessage(MessageQueue messageExt) {
+        if (AfterSaleTagsEnum.valueOf(messageExt.getTag()) == AfterSaleTagsEnum.AFTER_SALE_STATUS_CHANGE) {
             for (AfterSaleStatusChangeEvent afterSaleStatusChangeEvent : afterSaleStatusChangeEvents) {
                 try {
                     AfterSale afterSale = JSONUtil.toBean(new String(messageExt.getBody()), AfterSale.class);

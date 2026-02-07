@@ -4,7 +4,6 @@ import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.json.JSONUtil;
 import cn.lili.cache.Cache;
 import cn.lili.cache.CachePrefix;
-import cn.lili.common.properties.RocketmqCustomProperties;
 import cn.lili.common.security.enums.UserEnums;
 import cn.lili.common.utils.SnowFlake;
 import cn.lili.consumer.event.OrderStatusChangeEvent;

@@ -4,7 +4,6 @@ import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.exception.ServiceException;
-import cn.lili.common.properties.RocketmqCustomProperties;
 import cn.lili.modules.goods.entity.dos.CategoryParameter;
 import cn.lili.modules.goods.entity.dos.Parameters;
 import cn.lili.modules.goods.entity.dto.GoodsParamsDTO;
@@ -105,7 +104,7 @@ public class ParametersServiceImpl extends ServiceImpl<ParametersMapper, Paramet
 //
 //            String destination = rocketmqCustomProperties.getGoodsTopic() + ":" + GoodsTagsEnum.UPDATE_GOODS_INDEX.name();
 //            //发送mq消息
-//            rocketMQTemplate.asyncSend(destination, JSON.toJSONString(goodsIds), RocketmqSendCallbackBuilder.commonCallback());
+//            rocketMQTemplate.asyncSend(destination, JSON.toJSONString(goodsIds));
 //        }
 
         Boolean isUpdate = this.updateById(goodsParamsDTO);

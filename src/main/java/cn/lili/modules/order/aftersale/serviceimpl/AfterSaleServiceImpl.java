@@ -4,9 +4,8 @@ import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.core.util.NumberUtil;
 import cn.hutool.json.JSONUtil;
 import cn.lili.common.enums.ResultCode;
-import cn.lili.common.event.TransactionCommitSendMQEvent;
+import cn.lili.common.event.TransactionCommitSendMessageEvent;
 import cn.lili.common.exception.ServiceException;
-import cn.lili.common.properties.RocketmqCustomProperties;
 import cn.lili.common.security.AuthUser;
 import cn.lili.common.security.OperationalJudgment;
 import cn.lili.common.security.context.UserContext;
@@ -91,11 +90,7 @@ public class AfterSaleServiceImpl extends ServiceImpl<AfterSaleMapper, AfterSale
      */
     @Autowired
     private RefundSupport refundSupport;
-    /**
-     * RocketMQ配置
-     */
-    @Autowired
-    private RocketmqCustomProperties rocketmqCustomProperties;
+
     @Autowired
     private ApplicationEventPublisher applicationEventPublisher;
 
@@ -630,7 +625,7 @@ public class AfterSaleServiceImpl extends ServiceImpl<AfterSaleMapper, AfterSale
      */
     @Transactional(rollbackFor = Exception.class)
     public void sendAfterSaleMessage(AfterSale afterSale) {
-        applicationEventPublisher.publishEvent(new TransactionCommitSendMQEvent("发送售后单状态变更MQ消息", rocketmqCustomProperties.getAfterSaleTopic(),
+        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("发送售后单状态变更MQ消息", "after-sale-topic",
                 AfterSaleTagsEnum.AFTER_SALE_STATUS_CHANGE.name(), JSONUtil.toJsonStr(afterSale)));
     }
 

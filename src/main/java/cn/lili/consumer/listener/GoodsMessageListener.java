@@ -5,19 +5,19 @@ import cn.hutool.core.map.MapUtil;
 import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.core.util.ArrayUtil;
 import cn.hutool.core.util.ClassLoaderUtil;
-import cn.lili.consumer.event.GoodsCommentCompleteEvent;
-import cn.lili.modules.goods.entity.dto.GoodsParamsItemDTO;
-import com.alibaba.fastjson2.JSON;
-import com.alibaba.fastjson2.JSONObject;
 import cn.lili.common.aop.annotation.RetryOperation;
 import cn.lili.common.exception.RetryException;
+import cn.lili.common.message.queue.entity.MessageQueue;
+import cn.lili.common.message.queue.listener.MessageQueueListener;
 import cn.lili.common.vo.PageVO;
+import cn.lili.consumer.event.GoodsCommentCompleteEvent;
 import cn.lili.modules.distribution.entity.dos.DistributionGoods;
 import cn.lili.modules.distribution.entity.dto.DistributionGoodsSearchParams;
 import cn.lili.modules.distribution.service.DistributionGoodsService;
 import cn.lili.modules.distribution.service.DistributionSelectedGoodsService;
 import cn.lili.modules.goods.entity.dos.*;
 import cn.lili.modules.goods.entity.dto.GoodsCompleteMessage;
+import cn.lili.modules.goods.entity.dto.GoodsParamsItemDTO;
 import cn.lili.modules.goods.entity.dto.GoodsSearchParams;
 import cn.lili.modules.goods.entity.enums.GoodsAuthEnum;
 import cn.lili.modules.goods.entity.enums.GoodsStatusEnum;
@@ -35,12 +35,11 @@ import cn.lili.modules.promotion.service.PromotionService;
 import cn.lili.modules.search.entity.dos.EsGoodsIndex;
 import cn.lili.modules.search.service.EsGoodsIndexService;
 import cn.lili.rocketmq.tags.GoodsTagsEnum;
+import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.rocketmq.common.message.MessageExt;
-import org.apache.rocketmq.spring.annotation.RocketMQMessageListener;
-import org.apache.rocketmq.spring.core.RocketMQListener;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -55,9 +54,12 @@ import java.util.stream.Collectors;
  **/
 @Component
 @Slf4j
-@RocketMQMessageListener(topic = "${lili.data.rocketmq.goods-topic}", consumerGroup = "${lili.data.rocketmq.goods-group}")
-public class GoodsMessageListener implements RocketMQListener<MessageExt> {
+public class GoodsMessageListener implements MessageQueueListener {
 
+    @Override
+    public String getTopic() {
+        return "goods-topic";
+    }
     private static final int BATCH_SIZE = 10;
 
     /**
@@ -124,9 +126,9 @@ public class GoodsMessageListener implements RocketMQListener<MessageExt> {
 
     @Override
     @RetryOperation
-    public void onMessage(MessageExt messageExt) {
+    public void onMessage(MessageQueue messageExt) {
 
-        switch (GoodsTagsEnum.valueOf(messageExt.getTags())) {
+        switch (GoodsTagsEnum.valueOf(messageExt.getTag())) {
             //查看商品
             case VIEW_GOODS:
                 FootPrint footPrint = JSON.parseObject(new String(messageExt.getBody()), FootPrint.class);
@@ -481,7 +483,7 @@ public class GoodsMessageListener implements RocketMQListener<MessageExt> {
      *
      * @param messageExt 信息体
      */
-    private void goodsBuyComplete(MessageExt messageExt) {
+    private void goodsBuyComplete(MessageQueue messageExt) {
         String goodsCompleteMessageStr = new String(messageExt.getBody());
         List<GoodsCompleteMessage> goodsCompleteMessageList = JSON.parseArray(goodsCompleteMessageStr, GoodsCompleteMessage.class);
         for (GoodsCompleteMessage goodsCompleteMessage : goodsCompleteMessageList) {

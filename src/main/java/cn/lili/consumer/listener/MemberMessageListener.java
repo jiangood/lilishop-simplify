@@ -1,6 +1,8 @@
 package cn.lili.consumer.listener;
 
 import cn.hutool.json.JSONUtil;
+import cn.lili.common.message.queue.entity.MessageQueue;
+import cn.lili.common.message.queue.listener.MessageQueueListener;
 import cn.lili.consumer.event.*;
 import cn.lili.modules.connect.entity.dto.MemberConnectLoginMessage;
 import cn.lili.modules.member.entity.dos.Member;
@@ -10,9 +12,6 @@ import cn.lili.modules.member.service.MemberSignService;
 import cn.lili.modules.wallet.entity.dto.MemberWithdrawalMessage;
 import cn.lili.rocketmq.tags.MemberTagsEnum;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.rocketmq.common.message.MessageExt;
-import org.apache.rocketmq.spring.annotation.RocketMQMessageListener;
-import org.apache.rocketmq.spring.core.RocketMQListener;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -26,9 +25,12 @@ import java.util.List;
  **/
 @Component
 @Slf4j
-@RocketMQMessageListener(topic = "${lili.data.rocketmq.member-topic}", consumerGroup = "${lili.data.rocketmq.member-group}")
-public class MemberMessageListener implements RocketMQListener<MessageExt> {
+public class MemberMessageListener implements MessageQueueListener {
 
+    @Override
+    public String getTopic() {
+        return "member-topic";
+    }
     /**
      * 会员签到
      */
@@ -61,8 +63,8 @@ public class MemberMessageListener implements RocketMQListener<MessageExt> {
     private List<MemberConnectLoginEvent> memberConnectLoginEvents;
 
     @Override
-    public void onMessage(MessageExt messageExt) {
-        switch (MemberTagsEnum.valueOf(messageExt.getTags())) {
+    public void onMessage(MessageQueue messageExt) {
+        switch (MemberTagsEnum.valueOf(messageExt.getTag())) {
             //会员注册
             case MEMBER_REGISTER:
                 for (MemberRegisterEvent memberRegisterEvent : memberSignEvents) {

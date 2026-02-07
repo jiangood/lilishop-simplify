@@ -5,7 +5,6 @@ import cn.hutool.core.text.CharSequenceUtil;
 import com.alibaba.fastjson2.JSON;
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.exception.ServiceException;
-import cn.lili.common.properties.RocketmqCustomProperties;
 import cn.lili.common.security.context.UserContext;
 import cn.lili.common.security.enums.UserEnums;
 import cn.lili.common.utils.BeanUtil;
@@ -62,8 +61,6 @@ public class StudioServiceImpl extends ServiceImpl<StudioMapper, Studio> impleme
     @Autowired
     private TimeTrigger timeTrigger;
     @Autowired
-    private RocketmqCustomProperties rocketmqCustomProperties;
-    @Autowired
     private GoodsService goodsService;
 
     @Override
@@ -83,7 +80,7 @@ public class StudioServiceImpl extends ServiceImpl<StudioMapper, Studio> impleme
                     Long.parseLong(studio.getStartTime()) * 1000L,
                     broadcastMessage,
                     DelayQueueTools.wrapperUniqueKey(DelayTypeEnums.BROADCAST, studio.getId()),
-                    rocketmqCustomProperties.getPromotionTopic());
+                    "promotion-topic");
 
             //发送促销活动开始的延时任务
             this.timeTrigger.addDelay(timeTriggerMsg);
@@ -93,7 +90,7 @@ public class StudioServiceImpl extends ServiceImpl<StudioMapper, Studio> impleme
             timeTriggerMsg = new TimeTriggerMsg(TimeExecuteConstant.BROADCAST_EXECUTOR,
                     Long.parseLong(studio.getEndTime()) * 1000L, broadcastMessage,
                     DelayQueueTools.wrapperUniqueKey(DelayTypeEnums.BROADCAST, studio.getId()),
-                    rocketmqCustomProperties.getPromotionTopic());
+                    "promotion-topic");
             //发送促销活动开始的延时任务
             this.timeTrigger.addDelay(timeTriggerMsg);
         }
@@ -117,7 +114,7 @@ public class StudioServiceImpl extends ServiceImpl<StudioMapper, Studio> impleme
                     Long.parseLong(studio.getStartTime()) * 1000L,
                     DelayQueueTools.wrapperUniqueKey(DelayTypeEnums.BROADCAST, studio.getId()),
                     DateUtil.getDelayTime(Long.parseLong(studio.getStartTime())),
-                    rocketmqCustomProperties.getPromotionTopic());
+                    "promotion-topic");
 
             //直播间结束
             broadcastMessage = new BroadcastMessage(studio.getId(), StudioStatusEnum.END.name());
@@ -128,7 +125,7 @@ public class StudioServiceImpl extends ServiceImpl<StudioMapper, Studio> impleme
                     Long.parseLong(studio.getEndTime()) * 1000L,
                     DelayQueueTools.wrapperUniqueKey(DelayTypeEnums.BROADCAST, studio.getId()),
                     DateUtil.getDelayTime(Long.parseLong(studio.getEndTime())),
-                    rocketmqCustomProperties.getPromotionTopic());
+                    "promotion-topic");
         }
         return true;
     }

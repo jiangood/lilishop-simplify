@@ -1,11 +1,10 @@
 package cn.lili.consumer.listener;
 
 import cn.hutool.json.JSONUtil;
+import cn.lili.common.message.queue.entity.MessageQueue;
+import cn.lili.common.message.queue.listener.MessageQueueListener;
 import cn.lili.modules.message.entity.dto.NoticeMessageDTO;
 import cn.lili.modules.message.service.NoticeMessageService;
-import org.apache.rocketmq.common.message.MessageExt;
-import org.apache.rocketmq.spring.annotation.RocketMQMessageListener;
-import org.apache.rocketmq.spring.core.RocketMQListener;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -16,8 +15,12 @@ import org.springframework.stereotype.Component;
  * @since 2020/12/9
  */
 @Component
-@RocketMQMessageListener(topic = "${lili.data.rocketmq.notice-topic}", consumerGroup = "${lili.data.rocketmq.notice-group}")
-public class NoticeMessageListener implements RocketMQListener<MessageExt> {
+public class NoticeMessageListener implements MessageQueueListener {
+
+    @Override
+    public String getTopic() {
+        return "notice-topic";
+    }
 
     /**
      * 站内信
@@ -26,7 +29,7 @@ public class NoticeMessageListener implements RocketMQListener<MessageExt> {
     private NoticeMessageService noticeMessageService;
 
     @Override
-    public void onMessage(MessageExt messageExt) {
+    public void onMessage(MessageQueue messageExt) {
         NoticeMessageDTO noticeMessageDTO = JSONUtil.toBean(new String(messageExt.getBody()), NoticeMessageDTO.class);
         noticeMessageService.noticeMessage(noticeMessageDTO);
     }
