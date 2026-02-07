@@ -18,9 +18,11 @@ https://gitee.com/beijing_hongye_huicheng/lilishop/commit/8fcc5ebfd3d6bf125b58b0
 ## 整合安全认证模块
 ##去掉mq
  ai：去掉mq，改为内存实现
-- 去掉xxl-job
-## 去掉es
+## 去掉xxl-job
+ ai: 去掉xxl-job,改为springboot的任务调度
+## 去掉es， 由于SystemLog依赖es
 ai： 
-加入jpa依赖
-新开窗口：去掉elasticsearch，直接查数据库即可
+- 加入jpa依赖
+- SystemLog改为jpa实现，包括修改SystemLogVo为jpa实体, SystemLogRepository等
+- 去掉elasticsearch，直接查数据库即可。保持原有的逻辑，如果影响功能逻辑，加上 TODO 注释
      
