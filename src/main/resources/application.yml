@@ -25,10 +25,7 @@ spring:
 # 忽略TOKEN 鉴权 的url
 ignored:
   urls:
-    - /editor-app/**
-    - /MP_verify_qSyvBPhDsPdxvOhC.txt
-    - /weixin/**
-    - /source/**
+    # 买家端相关路径
     - /buyer/payment/cashier/**
     - /buyer/payment/cashierRefund/**
     - /buyer/other/pageData/**
@@ -47,12 +44,49 @@ ignored:
     - /buyer/member/evaluation/*/evaluationNumber
     - /buyer/other/appVersion/**
     - /buyer/broadcast/studio/**
+
+    # 管理端相关路径
+    - /manager/passport/user/login
+    - /manager/passport/user/refresh/**
+    - /manager/other/elasticsearch
+    - /manager/other/customWords
+
+    # 店铺端相关路径
+    - /store/passport/login/**
+    - /store/passport/login/refresh/**
+
+    # 通用资源路径
+    - /common/common/slider/**
+    - /common/common/sms/**
+    - /common/common/logo
+    - /common/common/site
+
+    # 第三方集成路径
+    - /weixin/**
+    - /MP_verify_qSyvBPhDsPdxvOhC.txt
+
+    # 开发调试工具路径
     - /druid/**
     - /swagger-ui.html
     - /swagger-ui/**
     - /v3/api-docs
     - /v3/api-docs/**
 
+    # 静态资源路径
+    - /static/**
+    - /public/**
+    - /resources/**
+    - /META-INF/resources/**
+    - /favicon.ico
+
+    # 编辑器及源码路径
+    - /editor-app/**
+    - /source/**
+
+    # 公共包
+    - /common/**
+    # IM
+    - /im/**
 
 # Mybatis-plus
 mybatis-plus:

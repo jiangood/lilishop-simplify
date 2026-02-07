@@ -63,7 +63,9 @@ public class BuyerAuthenticationFilter extends BasicAuthenticationFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws IOException, ServletException {
-
+        if(!request.getRequestURI().startsWith("/buyer")){
+            return;
+        }
         //从header中获取jwt
         String jwt = request.getHeader(SecurityEnum.HEADER_TOKEN.getValue());
         try {

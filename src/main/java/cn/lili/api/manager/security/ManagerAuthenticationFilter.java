@@ -78,6 +78,9 @@ public class ManagerAuthenticationFilter extends BasicAuthenticationFilter {
                 return;
             }
         }
+        if(!request.getRequestURI().startsWith("/manager")){
+            return;
+        }
 
         //从header中获取jwt
         String jwt = request.getHeader(SecurityEnum.HEADER_TOKEN.getValue());
