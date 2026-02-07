@@ -60,6 +60,7 @@
         <tencentcloud.version>3.1.693</tencentcloud.version>
         <kuaidi100-api.version>1.0.11</kuaidi100-api.version>
         <fastjson.version>2.0.59</fastjson.version>
+        <caffeine.version>3.2.3</caffeine.version>
     </properties>
 
 
@@ -501,6 +502,11 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+            <version>${caffeine.version}</version>
         </dependency>
     </dependencies>
 
