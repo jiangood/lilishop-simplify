@@ -1,97 +1,108 @@
 package cn.lili.common.message.queue.service;
 
+import cn.hutool.json.JSONUtil;
 import cn.lili.common.message.queue.entity.MessageQueue;
+import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * Message queue service
+ * Message queue service implementation
  * <p>
- * Handles message operations for the message queue system
+ * Handles message operations using JPA
  *
  * @author Trae
  * @since 2026-02-07
  */
-public interface MessageQueueService {
+@Slf4j
+@Service
+public class MessageQueueService  {
 
-    /**
-     * Send a message
-     *
-     * @param topic   Message topic
-     * @param tag     Message tag
-     * @param message Message content
-     * @return MessageQueue entity
-     */
-    MessageQueue send(String topic, String tag, Object message);
+    @Resource
+    private MessageQueueRepository messageQueueRepository;
 
-    /**
-     * Send a message asynchronously
-     *
-     * @param topic   Message topic
-     * @param tag     Message tag
-     * @param message Message content
-     */
-    void sendAsync(String topic, String tag, Object message);
+    @Transactional
+    public MessageQueue send(String topic, String tag, Object message) {
+        MessageQueue messageQueue = new MessageQueue();
+        messageQueue.setTopic(topic);
+        messageQueue.setTag(tag);
+        messageQueue.setMessage(JSONUtil.toJsonStr(message));
+        messageQueue.setStatus(0);
+        return messageQueueRepository.save(messageQueue);
+    }
 
-    /**
-     * Find messages by topic
-     *
-     * @param topic    Message topic
-     * @param pageable Pageable
-     * @return Page of MessageQueue entities
-     */
-    Page<MessageQueue> findByTopic(String topic, Pageable pageable);
+    
+    @Async
+    public void sendAsync(String topic, String tag, Object message) {
+        try {
+            send(topic, tag, message);
+        } catch (Exception e) {
+            log.error("Failed to send message asynchronously: {}", e.getMessage(), e);
+        }
+    }
 
-    /**
-     * Find pending messages by topic
-     *
-     * @param topic Message topic
-     * @param limit Maximum number of messages to return
-     * @return List of pending MessageQueue entities
-     */
-    List<MessageQueue> findPendingByTopic(String topic, int limit);
+    
+    public Page<MessageQueue> findByTopic(String topic, Pageable pageable) {
+        return messageQueueRepository.findByTopic(topic, pageable);
+    }
 
-    /**
-     * Mark message as processed
-     *
-     * @param id Message id
-     * @return boolean
-     */
-    boolean markAsProcessed(Long id);
+    
+    public List<MessageQueue> findPendingByTopic(String topic, int limit) {
+        return messageQueueRepository.findByTopicAndStatus(topic, 0, Pageable.ofSize(limit)).getContent();
+    }
 
-    /**
-     * Mark message as failed
-     *
-     * @param id          Message id
-     * @param errorMessage Error message
-     * @return boolean
-     */
-    boolean markAsFailed(Long id, String errorMessage);
+    
+    @Transactional
+    public boolean markAsProcessed(Long id) {
+        MessageQueue messageQueue = messageQueueRepository.findById(id).orElse(null);
+        if (messageQueue != null) {
+            messageQueue.setStatus(2);
+            messageQueue.setUpdateTime(LocalDateTime.now());
+            messageQueueRepository.save(messageQueue);
+            return true;
+        }
+        return false;
+    }
 
-    /**
-     * Delete old processed messages
-     *
-     * @param days Number of days to keep messages
-     * @return Number of deleted messages
-     */
-    int deleteOldMessages(int days);
+    
+    @Transactional
+    public boolean markAsFailed(Long id, String errorMessage) {
+        MessageQueue messageQueue = messageQueueRepository.findById(id).orElse(null);
+        if (messageQueue != null) {
+            messageQueue.setStatus(3);
+            messageQueue.setErrorMessage(errorMessage);
+            messageQueue.setRetryCount(messageQueue.getRetryCount() + 1);
+            messageQueue.setUpdateTime(LocalDateTime.now());
+            messageQueueRepository.save(messageQueue);
+            return true;
+        }
+        return false;
+    }
 
-    /**
-     * Find message by id
-     *
-     * @param id Message id
-     * @return MessageQueue entity
-     */
-    MessageQueue findById(Long id);
+    
+    @Transactional
+    public int deleteOldMessages(int days) {
+        LocalDateTime cutoffDate = LocalDateTime.now().minusDays(days);
+        return messageQueueRepository.deleteByStatusAndCreateTimeBefore(2, cutoffDate);
+    }
 
-    /**
-     * Save message
-     *
-     * @param messageQueue MessageQueue entity
-     * @return MessageQueue entity
-     */
-    MessageQueue save(MessageQueue messageQueue);
+    
+    public MessageQueue findById(Long id) {
+        return messageQueueRepository.findById(id).orElse(null);
+    }
+
+    
+    public MessageQueue save(MessageQueue messageQueue) {
+        return messageQueueRepository.save(messageQueue);
+    }
+
+
 
 }

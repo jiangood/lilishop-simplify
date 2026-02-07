@@ -10,14 +10,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
-/**
- * Message queue processor
- * <p>
- * Processes messages periodically and dispatches them to listeners
- *
- * @author Trae
- * @since 2026-02-07
- */
+
 @Slf4j
 @Component
 public class MessageQueueProcessor {
@@ -28,10 +21,8 @@ public class MessageQueueProcessor {
     @Autowired
     private List<MessageQueueListener> messageQueueListeners;
 
-    /**
-     * Process messages every 5 seconds
-     */
-    @Scheduled(fixedRate = 5000)
+
+    @Scheduled(fixedDelay = 3000)
     public void processMessages() {
         if (messageQueueListeners == null || messageQueueListeners.isEmpty()) {
             return;

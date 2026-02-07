@@ -1,21 +1,12 @@
 package cn.lili.common.message.queue.entity;
 
-import lombok.Data;
-import lombok.Getter;
-import lombok.Setter;
-
 import jakarta.persistence.*;
+import lombok.Data;
+
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
-/**
- * Message queue entity
- * <p>
- * Stores messages in the database for processing
- *
- * @author Trae
- * @since 2026-02-07
- */
+
 @Entity
 @Table(name = "lili_message_queue")
 @Data
