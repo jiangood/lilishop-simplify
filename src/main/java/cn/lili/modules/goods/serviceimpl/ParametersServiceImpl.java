@@ -18,7 +18,7 @@ import cn.lili.mybatis.util.PageUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import org.apache.rocketmq.spring.core.RocketMQTemplate;
+import cn.lili.common.message.queue.template.MessageQueueTemplate;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -43,10 +43,7 @@ public class ParametersServiceImpl extends ServiceImpl<ParametersMapper, Paramet
     private GoodsService goodsService;
 
     @Autowired
-    private RocketmqCustomProperties rocketmqCustomProperties;
-
-    @Autowired
-    private RocketMQTemplate rocketMQTemplate;
+    private MessageQueueTemplate messageQueueTemplate;
 
     @Autowired
     private CategoryParameterService categoryParameterService;
