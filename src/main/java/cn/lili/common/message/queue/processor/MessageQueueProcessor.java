@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.util.Assert;
 
 import java.util.List;
 
@@ -31,9 +32,7 @@ public class MessageQueueProcessor {
         for (MessageQueueListener listener : messageQueueListeners) {
             try {
                 String topic = listener.getTopic();
-                if (topic == null || topic.isEmpty()) {
-                    continue;
-                }
+                Assert.hasText(topic, "Topic cannot be empty");
 
                 // Find pending messages for this topic
                 List<MessageQueue> pendingMessages = messageQueueService.findPendingByTopic(topic, 10);
