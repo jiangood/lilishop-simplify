@@ -1,17 +1,19 @@
 package cn.lili.modules.payment.kit.core.utils;
 
+import cn.hutool.core.date.DatePattern;
+import cn.hutool.core.date.DateUtil;
+import cn.hutool.core.date.DateTime;
 import cn.hutool.core.util.StrUtil;
-import com.xkzhangsan.time.converter.DateTimeConverterUtil;
-import com.xkzhangsan.time.formatter.DateTimeFormatterUtil;
 
 import java.io.Serializable;
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 
 
 /**
  * 时间工具类
- * 依赖 xk-time
+ * 依赖 Hutool
  *
  * @author YunGouOS
  */
@@ -46,8 +48,9 @@ public class DateTimeZoneUtil implements Serializable {
         if (date == null) {
             throw new Exception("date is not null");
         }
-        ZonedDateTime zonedDateTime = DateTimeConverterUtil.toZonedDateTime(date);
-        time = DateTimeFormatterUtil.format(zonedDateTime, DateTimeFormatterUtil.YYYY_MM_DD_T_HH_MM_SS_XXX_FMT);
+        // 使用 Hutool 将 Date 转换为 DateTime，再格式化为带时区的字符串
+        DateTime dateTime = DateUtil.date(date);
+        time = dateTime.toString(DatePattern.UTC_PATTERN);
         return time;
     }
 
@@ -65,11 +68,12 @@ public class DateTimeZoneUtil implements Serializable {
         if (StrUtil.isBlank(str)) {
             throw new Exception("str is not null");
         }
-        ZonedDateTime zonedDateTime = DateTimeFormatterUtil.parseToZonedDateTime(str, DateTimeFormatterUtil.YYYY_MM_DD_T_HH_MM_SS_XXX_FMT);
-        if (zonedDateTime == null) {
-            throw new Exception("str to zonedDateTime fail");
+        // 使用 Hutool 解析带时区的字符串为 DateTime，再格式化为标准时间字符串
+        DateTime dateTime = DateUtil.parse(str);
+        if (dateTime == null) {
+            throw new Exception("str to dateTime fail");
         }
-        time = zonedDateTime.format(DateTimeFormatterUtil.YYYY_MM_DD_HH_MM_SS_FMT);
+        time = dateTime.toString(DatePattern.NORM_DATETIME_PATTERN);
         return time;
     }
 

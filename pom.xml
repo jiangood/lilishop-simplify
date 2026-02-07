@@ -44,7 +44,6 @@
         <poi-ooxml-version>5.2.3</poi-ooxml-version>
 
         <zxing>3.5.0</zxing>
-        <xk-time>3.2.3</xk-time>
         <commons-text>1.14.0</commons-text>
         <enjoy.version>4.3</enjoy.version>
         <spotify>1.2.2</spotify>
@@ -333,12 +332,7 @@
             <artifactId>javase</artifactId>
             <version>${zxing}</version>
         </dependency>
-        <!-- 开源多维码生成工具 -->
-        <dependency>
-            <groupId>com.github.xkzhangsan</groupId>
-            <artifactId>xk-time</artifactId>
-            <version>${xk-time}</version>
-        </dependency>
+        
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-text</artifactId>
