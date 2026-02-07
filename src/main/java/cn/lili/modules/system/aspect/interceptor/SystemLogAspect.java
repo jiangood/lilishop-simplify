@@ -6,7 +6,7 @@ import cn.lili.common.security.enums.UserEnums;
 import cn.lili.common.utils.IpUtils;
 import cn.lili.common.utils.SpelUtil;
 import cn.lili.common.utils.ThreadPoolUtil;
-import cn.lili.modules.permission.entity.vo.SystemLogVO;
+import cn.lili.modules.permission.entity.vo.SystemLog;
 import cn.lili.modules.permission.service.SystemLogService;
 import cn.lili.modules.system.aspect.annotation.SystemLogPoint;
 import jakarta.servlet.http.HttpServletRequest;
@@ -85,7 +85,7 @@ public class SystemLogAspect {
 
             Map<String, String[]> logParams = request.getParameterMap();
             AuthUser authUser = UserContext.getCurrentUser();
-            SystemLogVO systemLogVO = new SystemLogVO();
+            SystemLog systemLogVO = new SystemLog();
 
             if (authUser == null) {
                 //如果是商家则记录商家id，否则记录-1，代表平台id
@@ -135,10 +135,10 @@ public class SystemLogAspect {
      * 保存日志
      */
     private static class SaveSystemLogThread implements Runnable {
-        private final SystemLogVO systemLogVO;
+        private final SystemLog systemLogVO;
         private final SystemLogService systemLogService;
 
-        public SaveSystemLogThread(SystemLogVO systemLogVO, SystemLogService systemLogService) {
+        public SaveSystemLogThread(SystemLog systemLogVO, SystemLogService systemLogService) {
             this.systemLogVO = systemLogVO;
             this.systemLogService = systemLogService;
         }

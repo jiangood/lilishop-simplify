@@ -2,8 +2,8 @@ package cn.lili.modules.permission.service;
 
 import cn.lili.common.vo.PageVO;
 import cn.lili.common.vo.SearchVO;
-import cn.lili.modules.permission.entity.vo.SystemLogVO;
-import com.baomidou.mybatisplus.core.metadata.IPage;
+import cn.lili.modules.permission.entity.vo.SystemLog;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 
 import java.util.List;
 
@@ -21,7 +21,7 @@ public interface SystemLogService {
      * @param systemLogVO
      * @return
      */
-    void saveLog(SystemLogVO systemLogVO);
+    void saveLog(SystemLog systemLogVO);
 
     /**
      * 通过id删除日志
@@ -45,5 +45,5 @@ public interface SystemLogService {
      * @param storeId      店铺ID
      * @return 日志分页
      */
-    IPage<SystemLogVO> queryLog(String storeId, String operatorName, String key, SearchVO searchVo, PageVO pageVO);
+    Page<SystemLog> queryLog(String storeId, String operatorName, String key, SearchVO searchVo, PageVO pageVO);
 }

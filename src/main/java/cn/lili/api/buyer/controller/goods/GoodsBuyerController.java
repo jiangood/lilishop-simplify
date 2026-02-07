@@ -14,7 +14,6 @@ import cn.lili.modules.goods.service.GoodsSkuService;
 import cn.lili.modules.search.entity.dos.EsGoodsIndex;
 import cn.lili.modules.search.entity.dos.EsGoodsRelatedInfo;
 import cn.lili.modules.search.entity.dto.EsGoodsSearchDTO;
-import cn.lili.modules.search.service.EsGoodsSearchService;
 import cn.lili.modules.search.service.HotWordsService;
 import cn.lili.modules.statistics.aop.PageViewPoint;
 import cn.lili.modules.statistics.aop.enums.PageViewEnum;
@@ -57,11 +56,6 @@ public class GoodsBuyerController {
      */
     @Autowired
     private GoodsSkuService goodsSkuService;
-    /**
-     * ES商品搜索
-     */
-    @Autowired
-    private EsGoodsSearchService goodsSearchService;
 
     @Autowired
     private HotWordsService hotWordsService;
@@ -112,15 +106,18 @@ public class GoodsBuyerController {
     @GetMapping("/es")
     public ResultMessage<Page<EsGoodsIndex>> getGoodsByPageFromEs(EsGoodsSearchDTO goodsSearchParams, PageVO pageVO) {
         pageVO.setNotConvert(true);
-        return ResultUtil.data(goodsSearchService.searchGoodsByPage(goodsSearchParams, pageVO));
+        //return ResultUtil.data(goodsSearchService.searchGoodsByPage(goodsSearchParams, pageVO));
+        // TODO
+        return ResultUtil.data(null);
     }
 
     @Operation(summary = "从ES中获取相关商品品牌名称，分类名称及属性")
     @GetMapping("/es/related")
     public ResultMessage<EsGoodsRelatedInfo> getGoodsRelatedByPageFromEs(EsGoodsSearchDTO goodsSearchParams, PageVO pageVO) {
         pageVO.setNotConvert(true);
-        EsGoodsRelatedInfo selector = goodsSearchService.getSelector(goodsSearchParams, pageVO);
-        return ResultUtil.data(selector);
+        //EsGoodsRelatedInfo selector = goodsSearchService.getSelector(goodsSearchParams, pageVO);
+        // TODO
+        return ResultUtil.data(null);
     }
 
     @Operation(summary = "获取搜索热词")

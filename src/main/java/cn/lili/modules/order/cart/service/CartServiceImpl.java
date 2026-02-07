@@ -44,7 +44,6 @@ import cn.lili.modules.promotion.service.MemberCouponService;
 import cn.lili.modules.promotion.service.PointsGoodsService;
 import cn.lili.modules.promotion.service.PromotionGoodsService;
 import cn.lili.modules.search.entity.dos.EsGoodsIndex;
-import cn.lili.modules.search.service.EsGoodsSearchService;
 import cn.lili.modules.store.entity.dos.Store;
 import cn.lili.modules.store.entity.dos.StoreAddress;
 import cn.lili.modules.store.service.StoreAddressService;
@@ -97,11 +96,7 @@ public class CartServiceImpl implements CartService {
      */
     @Autowired
     private MemberAddressService memberAddressService;
-    /**
-     * ES商品
-     */
-    @Autowired
-    private EsGoodsSearchService esGoodsSearchService;
+
     /**
      * 砍价
      */
@@ -361,14 +356,18 @@ public class CartServiceImpl implements CartService {
         if (tradeDTO.getSkuList() != null && !tradeDTO.getSkuList().isEmpty()) {
             List<String> ids = tradeDTO.getSkuList().stream().filter(i -> Boolean.TRUE.equals(i.getChecked())).map(i -> i.getGoodsSku().getId()).collect(Collectors.toList());
 
-            List<EsGoodsIndex> esGoodsList = esGoodsSearchService.getEsGoodsBySkuIds(ids, null);
+
+//            List<EsGoodsIndex> esGoodsList = esGoodsSearchService.getEsGoodsBySkuIds(ids, null);
+            // TODO
+            List<EsGoodsIndex> esGoodsList = new ArrayList<>();
             for (EsGoodsIndex esGoodsIndex : esGoodsList) {
-                if (esGoodsIndex != null && esGoodsIndex.getPromotionMap() != null && !esGoodsIndex.getPromotionMap().isEmpty()) {
-                    List<String> couponIds = esGoodsIndex.getPromotionMap().keySet().stream().filter(i -> i.contains(PromotionTypeEnum.COUPON.name())).map(i -> i.substring(i.lastIndexOf("-") + 1)).collect(Collectors.toList());
-                    if (!couponIds.isEmpty()) {
-                        List<MemberCoupon> currentGoodsCanUse = memberCouponService.getCurrentGoodsCanUse(tradeDTO.getMemberId(), couponIds, totalPrice);
-                        count = currentGoodsCanUse.size();
-                    }
+                if (esGoodsIndex == null || esGoodsIndex.getPromotionMap() == null || esGoodsIndex.getPromotionMap().isEmpty()) {
+                    continue;
+                }
+                List<String> couponIds = esGoodsIndex.getPromotionMap().keySet().stream().filter(i -> i.contains(PromotionTypeEnum.COUPON.name())).map(i -> i.substring(i.lastIndexOf("-") + 1)).collect(Collectors.toList());
+                if (!couponIds.isEmpty()) {
+                    List<MemberCoupon> currentGoodsCanUse = memberCouponService.getCurrentGoodsCanUse(tradeDTO.getMemberId(), couponIds, totalPrice);
+                    count = currentGoodsCanUse.size();
                 }
             }
 
