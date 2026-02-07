@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 
 
 @Entity
-@Table(name = "lili_message_queue")
+@Table(name = "li_message_queue")
 @Data
 public class MessageQueue implements Serializable {
 
