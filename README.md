@@ -20,9 +20,10 @@ https://gitee.com/beijing_hongye_huicheng/lilishop/commit/8fcc5ebfd3d6bf125b58b0
  ai：去掉mq，改为内存实现
 ## 去掉xxl-job
  ai: 去掉xxl-job,改为springboot的任务调度
-## 去掉es， 由于SystemLog依赖es
+## 去掉es
+SystemLog依赖es, 然后是商品
 ai： 
 - 加入jpa依赖
-- SystemLog改为jpa实现，包括修改SystemLogVo为jpa实体, SystemLogRepository等
-- 去掉elasticsearch，直接查数据库即可。保持原有的逻辑，如果影响功能逻辑，加上 TODO 注释
+- SystemLog改为jpa实现，包括修改SystemLogVo为jpa实体, SystemLogRepository等， 注意使用的springboot3
+- 移除elasticsearch，已有数据直接查数据库即可。保持原有的逻辑，如果影响功能逻辑，加上 TODO 注释
      

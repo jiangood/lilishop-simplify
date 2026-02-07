@@ -2,7 +2,7 @@ package cn.lili.modules.permission.service;
 
 import cn.lili.common.vo.PageVO;
 import cn.lili.common.vo.SearchVO;
-import cn.lili.modules.permission.entity.vo.SystemLogVO;
+import cn.lili.modules.permission.entity.dos.SystemLog;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 
 import java.util.List;
@@ -18,15 +18,15 @@ public interface SystemLogService {
     /**
      * 添加日志
      *
-     * @param systemLogVO
+     * @param systemLog 系统日志
      * @return
      */
-    void saveLog(SystemLogVO systemLogVO);
+    void saveLog(SystemLog systemLog);
 
     /**
      * 通过id删除日志
      *
-     * @param id
+     * @param id 日志ID列表
      */
     void deleteLog(List<String> id);
 
@@ -45,5 +45,5 @@ public interface SystemLogService {
      * @param storeId      店铺ID
      * @return 日志分页
      */
-    IPage<SystemLogVO> queryLog(String storeId, String operatorName, String key, SearchVO searchVo, PageVO pageVO);
+    IPage<SystemLog> queryLog(String storeId, String operatorName, String key, SearchVO searchVo, PageVO pageVO);
 }
