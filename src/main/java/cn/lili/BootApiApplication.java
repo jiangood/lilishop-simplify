@@ -30,7 +30,7 @@ public class BootApiApplication {
 
     public static void main(String[] args) {
         System.setProperty("es.set.netty.runtime.available.processors", "false");
-        System.setProperty("rocketmq.client.logUseSlf4j","true");
+
         SpringApplication.run(BootApiApplication.class, args);
     }
 }

@@ -141,29 +141,3 @@ lili:
   data:
     logstash:
       server: 192.168.0.116:4560
-    rocketmq:
-      promotion-topic: lili_promotion_topic
-      promotion-group: lili_promotion_group
-      msg-ext-topic: lili_msg_topic
-      msg-ext-group: lili_msg_group
-      goods-topic: lili_goods_topic
-      goods-group: lili_goods_group
-      order-topic: lili_order_topic
-      order-group: lili_order_group
-      member-topic: lili_member_topic
-      member-group: lili_member_group
-      store-topic: lili_store_topic
-      store-group: lili_store_group
-      other-topic: lili_other_topic
-      other-group: lili_other_group
-      notice-topic: lili_notice_topic
-      notice-group: lili_notice_group
-      notice-send-topic: lili_send_notice_topic
-      notice-send-group: lili_send_notice_group
-      after-sale-topic: lili_after_sale_topic
-      after-sale-group: lili_after_sale_group
-rocketmq:
-  name-server: 192.168.31.100:9876
-  producer:
-    group: lili_group
-    send-message-timeout: 30000

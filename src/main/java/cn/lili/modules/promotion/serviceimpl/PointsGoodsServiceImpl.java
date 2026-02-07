@@ -6,7 +6,7 @@ import com.alibaba.fastjson2.JSON;
 import cn.lili.common.enums.PromotionTypeEnum;
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.exception.ServiceException;
-import cn.lili.common.properties.RocketmqCustomProperties;
+
 import cn.lili.modules.goods.entity.dos.GoodsSku;
 import cn.lili.modules.goods.service.GoodsSkuService;
 import cn.lili.modules.promotion.entity.dos.PointsGoods;
@@ -18,11 +18,11 @@ import cn.lili.modules.promotion.service.PointsGoodsService;
 import cn.lili.modules.promotion.service.PromotionGoodsService;
 import cn.lili.modules.promotion.tools.PromotionTools;
 import cn.lili.modules.search.utils.EsIndexUtil;
-import cn.lili.rocketmq.RocketmqSendCallbackBuilder;
-import cn.lili.rocketmq.tags.GoodsTagsEnum;
+
+
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.rocketmq.spring.core.RocketMQTemplate;
+import cn.lili.common.message.queue.template.MessageQueueTemplate;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -52,16 +52,10 @@ public class PointsGoodsServiceImpl extends AbstractPromotionsServiceImpl<Points
     private GoodsSkuService goodsSkuService;
 
     /**
-     * rocketMq配置
+     * MessageQueueTemplate
      */
     @Autowired
-    private RocketmqCustomProperties rocketmqCustomProperties;
-
-    /**
-     * rocketMq
-     */
-    @Autowired
-    private RocketMQTemplate rocketMQTemplate;
+    private MessageQueueTemplate messageQueueTemplate;
 
 
     @Override
@@ -228,8 +222,8 @@ public class PointsGoodsServiceImpl extends AbstractPromotionsServiceImpl<Points
         Map<String, Object> update = MapUtil.builder(new HashMap<String, Object>()).put("points", promotions.getPoints()).build();
         //修改规格索引,发送mq消息
         Map<String, Object> updateIndexFieldsMap = EsIndexUtil.getUpdateIndexFieldsMap(query, update);
-        String destination = rocketmqCustomProperties.getGoodsTopic() + ":" + GoodsTagsEnum.UPDATE_GOODS_INDEX_FIELD.name();
-        rocketMQTemplate.asyncSend(destination, JSON.toJSONString(updateIndexFieldsMap), RocketmqSendCallbackBuilder.commonCallback());
+        String destination = "goods:" + "UPDATE_GOODS_INDEX_FIELD";
+        messageQueueTemplate.asyncSend(destination, JSON.toJSONString(updateIndexFieldsMap));
     }
 
 

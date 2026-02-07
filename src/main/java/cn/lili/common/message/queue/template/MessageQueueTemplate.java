@@ -5,14 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-/**
- * Message queue template
- * <p>
- * Mimics RocketMQTemplate interface for easy replacement
- *
- * @author Trae
- * @since 2026-02-07
- */
+
 @Slf4j
 @Component
 public class MessageQueueTemplate {

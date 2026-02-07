@@ -8,8 +8,9 @@ import cn.lili.cache.CachePrefix;
 import cn.lili.common.enums.PromotionTypeEnum;
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.event.TransactionCommitSendMQEvent;
+import cn.lili.common.event.TransactionCommitSendMessageEvent;
 import cn.lili.common.exception.ServiceException;
-import cn.lili.common.properties.RocketmqCustomProperties;
+
 import cn.lili.common.security.AuthUser;
 import cn.lili.common.security.context.UserContext;
 import cn.lili.common.utils.SnowFlake;
@@ -47,8 +48,8 @@ import cn.lili.modules.search.entity.dos.EsGoodsIndex;
 import cn.lili.modules.search.service.EsGoodsIndexService;
 import cn.lili.mybatis.BaseEntity;
 import cn.lili.mybatis.util.PageUtil;
-import cn.lili.rocketmq.RocketmqSendCallbackBuilder;
-import cn.lili.rocketmq.tags.GoodsTagsEnum;
+
+
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
@@ -64,7 +65,7 @@ import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.ss.util.CellRangeAddressList;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.apache.rocketmq.spring.core.RocketMQTemplate;
+import cn.lili.common.message.queue.template.MessageQueueTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
@@ -104,15 +105,10 @@ public class GoodsSkuServiceImpl extends ServiceImpl<GoodsSkuMapper, GoodsSku> i
     @Autowired
     private GoodsGalleryService goodsGalleryService;
     /**
-     * rocketMq
+     * message queue
      */
     @Autowired
-    private RocketMQTemplate rocketMQTemplate;
-    /**
-     * rocketMq配置
-     */
-    @Autowired
-    private RocketmqCustomProperties rocketmqCustomProperties;
+    private MessageQueueTemplate messageQueueTemplate;
     /**
      * 商品
      */
@@ -184,7 +180,7 @@ public class GoodsSkuServiceImpl extends ServiceImpl<GoodsSkuMapper, GoodsSku> i
             goodsGalleryService.removeByGoodsId(goods.getId());
 
             //发送mq消息
-            String destination = rocketmqCustomProperties.getGoodsTopic() + ":" + GoodsTagsEnum.SKU_DELETE.name();
+            String destination = "goods:" + "SKU_DELETE";
             asyncSendIfPresent(destination, JSON.toJSONString(oldSkuIds));
         } else {
             skuList = new ArrayList<>();
@@ -282,14 +278,14 @@ public class GoodsSkuServiceImpl extends ServiceImpl<GoodsSkuMapper, GoodsSku> i
         //如果使用商品ID无法查询SKU则返回错误
         if (goodsVO == null || goodsSku == null) {
             //发送mq消息
-            String destination = rocketmqCustomProperties.getGoodsTopic() + ":" + GoodsTagsEnum.GOODS_DELETE.name();
+            String destination = "goods:" + "GOODS_DELETE";
             asyncSendIfPresent(destination, JSON.toJSONString(Collections.singletonList(goodsId)));
             throw new ServiceException(ResultCode.GOODS_NOT_EXIST);
         }
 
         //商品下架||商品未审核通过||商品删除，则提示：商品已下架
         if (GoodsStatusEnum.DOWN.name().equals(goodsVO.getMarketEnable()) || !GoodsAuthEnum.PASS.name().equals(goodsVO.getAuthFlag()) || Boolean.TRUE.equals(goodsVO.getDeleteFlag())) {
-            String destination = rocketmqCustomProperties.getGoodsTopic() + ":" + GoodsTagsEnum.GOODS_DELETE.name();
+            String destination = "goods:" + "GOODS_DELETE";
             asyncSendIfPresent(destination, JSON.toJSONString(Collections.singletonList(goodsId)));
             throw new ServiceException(ResultCode.GOODS_NOT_EXIST);
         }
@@ -369,7 +365,7 @@ public class GoodsSkuServiceImpl extends ServiceImpl<GoodsSkuMapper, GoodsSku> i
         //记录用户足迹
         if (currentUser != null) {
             FootPrint footPrint = new FootPrint(currentUser.getId(), goodsIndex.getStoreId(), goodsId, skuId);
-            String destination = rocketmqCustomProperties.getGoodsTopic() + ":" + GoodsTagsEnum.VIEW_GOODS.name();
+            String destination = "goods:" + "VIEW_GOODS";
             asyncSendIfPresent(destination, footPrint);
         }
         return map;
@@ -419,12 +415,12 @@ public class GoodsSkuServiceImpl extends ServiceImpl<GoodsSkuMapper, GoodsSku> i
         if (Boolean.TRUE.equals(update)) {
             if (GoodsStatusEnum.UPPER.name().equals(marketEnable)) {
                 applicationEventPublisher.publishEvent(new TransactionCommitSendMQEvent("生成店铺商品",
-                        rocketmqCustomProperties.getGoodsTopic(), GoodsTagsEnum.GENERATOR_STORE_GOODS_INDEX.name(),
+                        "goods", "GENERATOR_STORE_GOODS_INDEX",
                         storeId));
             } else if (GoodsStatusEnum.DOWN.name().equals(marketEnable)) {
                 cache.vagueDel(CachePrefix.GOODS_SKU.getPrefix());
                 applicationEventPublisher.publishEvent(new TransactionCommitSendMQEvent("删除店铺商品",
-                        rocketmqCustomProperties.getGoodsTopic(), GoodsTagsEnum.STORE_GOODS_DELETE.name(), storeId));
+                        "goods", "STORE_GOODS_DELETE", storeId));
             }
         }
     }
@@ -732,8 +728,7 @@ public class GoodsSkuServiceImpl extends ServiceImpl<GoodsSkuMapper, GoodsSku> i
             if (isFlag && quantity > 0 && CharSequenceUtil.equals(goodsSku.getMarketEnable(), GoodsStatusEnum.UPPER.name())) {
                 List<String> goodsIds = new ArrayList<>();
                 goodsIds.add(goodsSku.getGoodsId());
-                applicationEventPublisher.publishEvent(new TransactionCommitSendMQEvent("更新商品", rocketmqCustomProperties.getGoodsTopic(),
-                        GoodsTagsEnum.UPDATE_GOODS_INDEX.name(), goodsIds));
+                applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("更新商品", "goods", "UPDATE_GOODS_INDEX", goodsIds));
             }
         }
     }
@@ -770,8 +765,7 @@ public class GoodsSkuServiceImpl extends ServiceImpl<GoodsSkuMapper, GoodsSku> i
             if (isFlag && quantity > 0 && CharSequenceUtil.equals(goodsSku.getMarketEnable(), GoodsStatusEnum.UPPER.name())) {
                 List<String> goodsIds = new ArrayList<>();
                 goodsIds.add(goodsSku.getGoodsId());
-                applicationEventPublisher.publishEvent(new TransactionCommitSendMQEvent("更新商品", rocketmqCustomProperties.getGoodsTopic(),
-                        GoodsTagsEnum.UPDATE_GOODS_INDEX.name(), goodsIds));
+                applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("更新商品", "goods", "UPDATE_GOODS_INDEX", goodsIds));
             }
         }
     }
@@ -1124,8 +1118,8 @@ public class GoodsSkuServiceImpl extends ServiceImpl<GoodsSkuMapper, GoodsSku> i
     }
 
     private void asyncSendIfPresent(String destination, Object payload) {
-        if (rocketMQTemplate != null) {
-            rocketMQTemplate.asyncSend(destination, payload, RocketmqSendCallbackBuilder.commonCallback());
+        if (messageQueueTemplate != null) {
+            messageQueueTemplate.asyncSend(destination, payload);
         }
     }
 

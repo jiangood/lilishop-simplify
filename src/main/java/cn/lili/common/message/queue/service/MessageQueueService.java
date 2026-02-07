@@ -13,14 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 
-/**
- * Message queue service implementation
- * <p>
- * Handles message operations using JPA
- *
- * @author Trae
- * @since 2026-02-07
- */
+
 @Slf4j
 @Service
 public class MessageQueueService  {
@@ -29,13 +22,13 @@ public class MessageQueueService  {
     private MessageQueueRepository messageQueueRepository;
 
     @Transactional
-    public MessageQueue send(String topic, String tag, Object message) {
+    public void send(String topic, String tag, Object message) {
         MessageQueue messageQueue = new MessageQueue();
         messageQueue.setTopic(topic);
         messageQueue.setTag(tag);
         messageQueue.setMessage(JSONUtil.toJsonStr(message));
         messageQueue.setStatus(0);
-        return messageQueueRepository.save(messageQueue);
+        messageQueueRepository.save(messageQueue);
     }
 
     
@@ -48,12 +41,7 @@ public class MessageQueueService  {
         }
     }
 
-    
-    public Page<MessageQueue> findByTopic(String topic, Pageable pageable) {
-        return messageQueueRepository.findByTopic(topic, pageable);
-    }
 
-    
     public List<MessageQueue> findPendingByTopic(String topic, int limit) {
         return messageQueueRepository.findByTopicAndStatus(topic, 0, Pageable.ofSize(limit)).getContent();
     }
@@ -93,15 +81,6 @@ public class MessageQueueService  {
         return messageQueueRepository.deleteByStatusAndCreateTimeBefore(2, cutoffDate);
     }
 
-    
-    public MessageQueue findById(Long id) {
-        return messageQueueRepository.findById(id).orElse(null);
-    }
-
-    
-    public MessageQueue save(MessageQueue messageQueue) {
-        return messageQueueRepository.save(messageQueue);
-    }
 
 
 
