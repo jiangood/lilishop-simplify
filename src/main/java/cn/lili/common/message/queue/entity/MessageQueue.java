@@ -1,6 +1,7 @@
 package cn.lili.common.message.queue.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -24,6 +25,7 @@ public class MessageQueue implements Serializable {
     /**
      * Message topic
      */
+    @NotNull
     private String topic;
 
     /**
