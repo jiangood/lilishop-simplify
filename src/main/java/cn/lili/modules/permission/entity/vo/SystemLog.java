@@ -32,7 +32,7 @@ public class SystemLog implements Serializable {
 
     private static final long serialVersionUID = -8995552592401630086L;
 
-    @Id
+    @jakarta.persistence.Id
     @Schema(description = "id")
     private String id;
 
@@ -85,4 +85,6 @@ public class SystemLog implements Serializable {
 
         this.requestParam = ObjectUtil.mapToString(paramMap);
     }
+
+
 }
