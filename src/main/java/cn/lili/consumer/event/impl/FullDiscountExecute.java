@@ -27,10 +27,10 @@ import cn.lili.modules.order.order.service.OrderService;
 import cn.lili.modules.order.trade.entity.dos.OrderLog;
 import cn.lili.modules.order.trade.service.OrderLogService;
 import cn.lili.modules.promotion.service.MemberCouponService;
-import cn.lili.rocketmq.RocketmqSendCallbackBuilder;
-import cn.lili.rocketmq.tags.OrderTagsEnum;
+
+
 import lombok.extern.slf4j.Slf4j;
-import org.apache.rocketmq.spring.core.RocketMQTemplate;
+import cn.lili.common.message.queue.template.MessageQueueTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -71,10 +71,7 @@ public class FullDiscountExecute implements TradeEvent, OrderStatusChangeEvent {
     private GoodsSkuService goodsSkuService;
 
     @Autowired
-    private RocketmqCustomProperties rocketmqCustomProperties;
-
-    @Autowired
-    private RocketMQTemplate rocketMQTemplate;
+    private MessageQueueTemplate messageQueueTemplate;
 
     @Override
     public void orderCreate(TradeDTO tradeDTO) {
@@ -244,8 +241,8 @@ public class FullDiscountExecute implements TradeEvent, OrderStatusChangeEvent {
         orderMessage.setPaymentMethod(order.getPaymentMethod());
         orderMessage.setNewStatus(OrderStatusEnum.PAID);
 
-        String destination = rocketmqCustomProperties.getOrderTopic() + ":" + OrderTagsEnum.STATUS_CHANGE.name();
+        String destination = "order:" + "STATUS_CHANGE";
         //发送订单变更mq消息
-        rocketMQTemplate.asyncSend(destination, JSONUtil.toJsonStr(orderMessage), RocketmqSendCallbackBuilder.commonCallback());
+        messageQueueTemplate.asyncSend(destination, JSONUtil.toJsonStr(orderMessage));
     }
 }
