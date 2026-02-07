@@ -1,12 +1,12 @@
-package cn.lili.common.sensitive.quartz;
+package cn.lili.common.sensitive.task;
 
 import cn.lili.cache.Cache;
 import cn.lili.cache.CachePrefix;
 import cn.lili.common.sensitive.SensitiveWordsFilter;
 import lombok.extern.slf4j.Slf4j;
-import org.quartz.JobExecutionContext;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.quartz.QuartzJobBean;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 
@@ -18,18 +18,17 @@ import java.util.List;
  * 2021-11-23 16:31
  */
 @Slf4j
-public class SensitiveQuartz extends QuartzJobBean {
+@Component
+public class SensitiveTask {
 
     @Autowired
     private Cache<List<String>> cache;
 
     /**
-     * 定时更新敏感词信息
-     *
-     * @param jobExecutionContext
+     * 定时更新敏感词信息，每小时执行一次
      */
-    @Override
-    protected void executeInternal(JobExecutionContext jobExecutionContext) {
+    @Scheduled(fixedRate = 3600000)
+    public void updateSensitiveWords() {
         log.info("敏感词定时更新");
         try {
             List<String> sensitives = cache.get(CachePrefix.SENSITIVE.getPrefix());
