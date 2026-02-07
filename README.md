@@ -32,3 +32,5 @@ ai：
 ## 去掉mq
 ai-plan：使用jpa实现一个简单的消息队列，目标是替换项目的mq， 要求类名简洁直观
      
+
+去掉项目并未使用的shardingsphere依赖
