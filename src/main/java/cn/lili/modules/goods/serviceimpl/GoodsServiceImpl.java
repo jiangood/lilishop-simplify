@@ -375,7 +375,7 @@ public class GoodsServiceImpl extends ServiceImpl<GoodsMapper, Goods> implements
             //商品审核消息
             String destination = "goods:" + "GOODS_AUDIT";
             //发送mq消息
-            messageQueueTemplate.asyncSend(destination, JSON.toJSONString(goods));
+            messageQueueTemplate.send(destination, JSON.toJSONString(goods));
         }
         cache.multiDel(goodsCacheKeys);
         return result;

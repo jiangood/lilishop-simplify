@@ -42,7 +42,7 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message> impl
         this.save(message);
         //发送站内信消息提醒
         String noticeSendDestination = "notice:" + "MESSAGE";
-        messageQueueTemplate.asyncSend(noticeSendDestination, message);
+        messageQueueTemplate.send(noticeSendDestination, message);
         return true;
     }
 

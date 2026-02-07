@@ -242,6 +242,6 @@ public class FullDiscountExecute implements TradeEvent, OrderStatusChangeEvent {
 
         String destination = "order:" + "STATUS_CHANGE";
         //发送订单变更mq消息
-        messageQueueTemplate.asyncSend(destination, JSONUtil.toJsonStr(orderMessage));
+        messageQueueTemplate.send(destination, JSONUtil.toJsonStr(orderMessage));
     }
 }

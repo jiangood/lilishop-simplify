@@ -50,7 +50,7 @@ public class MemberTokenGenerate extends AbstractTokenGenerate<Member> {
         member.setClientEnum(clientTypeEnum.name());
         if (messageQueueTemplate != null) {
             String destination = "member:" + "MEMBER_LOGIN";
-            messageQueueTemplate.asyncSend(destination, member);
+            messageQueueTemplate.send(destination, member);
         }
 
         AuthUser authUser = AuthUser.builder()

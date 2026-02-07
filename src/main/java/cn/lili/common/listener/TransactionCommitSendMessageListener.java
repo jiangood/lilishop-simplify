@@ -31,7 +31,7 @@ public class TransactionCommitSendMessageListener {
         log.info("Transaction committed, sending message: topic={}, tag={}", event.getTopic(), event.getTag());
         String destination = event.getTopic() + ":" + event.getTag();
         // Send message asynchronously
-        messageQueueTemplate.asyncSend(destination, event.getMessage());
+        messageQueueTemplate.send(destination, event.getMessage());
     }
 
 }

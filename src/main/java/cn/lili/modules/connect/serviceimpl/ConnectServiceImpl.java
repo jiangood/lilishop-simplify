@@ -308,7 +308,7 @@ public class ConnectServiceImpl extends ServiceImpl<ConnectMapper, Connect> impl
             String destination =
                     "member:" + "MEMBER_CONNECT_LOGIN";
             //发送用户第三方登录消息
-            messageQueueTemplate.asyncSend(destination, JSON.toJSONString(memberConnectLoginMessage));
+            messageQueueTemplate.send(destination, JSON.toJSONString(memberConnectLoginMessage));
 
             return memberTokenGenerate.createToken(member, longTerm);
         } catch (Exception e) {

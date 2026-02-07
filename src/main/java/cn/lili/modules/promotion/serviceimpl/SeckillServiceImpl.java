@@ -194,7 +194,7 @@ public class SeckillServiceImpl extends AbstractPromotionsServiceImpl<SeckillMap
         //删除商品促销消息
         String destination = "goods_topic" + ":" + GoodsTagsEnum.DELETE_GOODS_INDEX_PROMOTIONS.name();
         //发送mq消息
-        messageQueueTemplate.asyncSend(destination, JSON.toJSONString(build));
+        messageQueueTemplate.send(destination, JSON.toJSONString(build));
     }
 
     @Override

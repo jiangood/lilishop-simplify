@@ -86,7 +86,7 @@ public class MemberSignServiceImpl extends ServiceImpl<MemberSignMapper, MemberS
                 this.baseMapper.insert(memberSign);
                 //签到成功后发送消息赠送积分
                 String destination = "member:" + "MEMBER_SIGN";
-                messageQueueTemplate.asyncSend(destination, memberSign);
+                messageQueueTemplate.send(destination, memberSign);
                 return true;
             } catch (Exception e) {
                 throw new ServiceException(ResultCode.MEMBER_SIGN_REPEAT);

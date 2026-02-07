@@ -102,7 +102,7 @@ public class StoreDetailServiceImpl extends ServiceImpl<StoreDetailMapper, Store
         }
         String destination = "store:" + "EDIT_STORE_SETTING";
         //发送订单变更mq消息
-        messageQueueTemplate.asyncSend(destination, store);
+        messageQueueTemplate.send(destination, store);
         return result;
     }
 
@@ -116,7 +116,7 @@ public class StoreDetailServiceImpl extends ServiceImpl<StoreDetailMapper, Store
                 MapUtil.builder(new HashMap<String, Object>()).put("storeName", store.getStoreName()).put("selfOperated", store.getSelfOperated()).build());
         String destination = "goods:" + "UPDATE_GOODS_INDEX_FIELD";
         //发送mq消息
-        messageQueueTemplate.asyncSend(destination, JSON.toJSONString(updateIndexFieldsMap));
+        messageQueueTemplate.send(destination, JSON.toJSONString(updateIndexFieldsMap));
     }
 
     @Override

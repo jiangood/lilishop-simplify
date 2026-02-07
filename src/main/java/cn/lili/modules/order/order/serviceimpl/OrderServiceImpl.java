@@ -632,7 +632,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         if (!goodsCompleteMessageList.isEmpty()) {
             String destination = "goods:" + "BUY_GOODS_COMPLETE";
             //发送订单变更mq消息
-            messageQueueTemplate.asyncSend(destination, JSONUtil.toJsonStr(goodsCompleteMessageList));
+            messageQueueTemplate.send(destination, JSONUtil.toJsonStr(goodsCompleteMessageList));
         }
     }
 

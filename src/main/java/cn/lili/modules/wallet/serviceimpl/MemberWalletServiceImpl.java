@@ -306,7 +306,7 @@ public class MemberWalletServiceImpl extends ServiceImpl<MemberWalletMapper, Mem
         memberWithdrawalMessage.setMemberId(authUser.getId());
         memberWithdrawalMessage.setPrice(price);
         String destination = "member-topic"+ ":" + MemberTagsEnum.MEMBER_WITHDRAWAL.name();
-        messageQueueTemplate.asyncSend(destination, memberWithdrawalMessage);
+        messageQueueTemplate.send(destination, memberWithdrawalMessage);
 
         return true;
     }
@@ -345,7 +345,7 @@ public class MemberWalletServiceImpl extends ServiceImpl<MemberWalletMapper, Mem
         memberWithdrawalMessage.setStatus(memberWithdrawApply.getApplyStatus());
 
         String destination = "member-topic" + ":" + MemberTagsEnum.MEMBER_WITHDRAWAL.name();
-        messageQueueTemplate.asyncSend(destination, memberWithdrawalMessage);
+        messageQueueTemplate.send(destination, memberWithdrawalMessage);
     }
 
 }

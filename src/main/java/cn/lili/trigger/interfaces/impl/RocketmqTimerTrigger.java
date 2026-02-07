@@ -80,7 +80,7 @@ public class RocketmqTimerTrigger implements TimeTrigger {
         TimeTriggerMsg timeTriggerMsg = new TimeTriggerMsg(executorName, triggerTime, param, uniqueKey, topic);
         Message<TimeTriggerMsg> message = MessageBuilder.withPayload(timeTriggerMsg).build();
         log.info("延时任务发送信息：{}", message);
-        this.messageQueueTemplate.asyncSend(topic, message);
+        this.messageQueueTemplate.send(topic, message);
     }
 
     @Override

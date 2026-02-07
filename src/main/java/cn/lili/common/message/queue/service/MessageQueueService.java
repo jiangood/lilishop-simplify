@@ -34,14 +34,7 @@ public class MessageQueueService  {
     }
 
     
-    @Async
-    public void sendAsync(String topic, String tag, Object message) {
-        try {
-            send(topic, tag, message);
-        } catch (Exception e) {
-            log.error("Failed to send message asynchronously: {}", e.getMessage(), e);
-        }
-    }
+
 
 
     public List<MessageQueue> findPending( int limit) {

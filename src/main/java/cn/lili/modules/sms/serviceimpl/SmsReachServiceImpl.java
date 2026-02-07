@@ -35,7 +35,7 @@ public class SmsReachServiceImpl extends ServiceImpl<SmsReachMapper, SmsReach> i
         smsReachDTO.setMobile(mobile);
         this.save(smsReach);
         //发送短信批量发送mq消息
-        messageQueueTemplate.asyncSend(destination, JSONUtil.toJsonStr(smsReachDTO));
+        messageQueueTemplate.send(destination, JSONUtil.toJsonStr(smsReachDTO));
 
     }
 }

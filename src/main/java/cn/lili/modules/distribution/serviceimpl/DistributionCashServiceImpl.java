@@ -82,7 +82,7 @@ public class DistributionCashServiceImpl extends ServiceImpl<DistributionCashMap
                 memberWithdrawalMessage.setPrice(applyMoney);
                 memberWithdrawalMessage.setStatus(WithdrawStatusEnum.APPLY.name());
                 String destination = "member:" + "MEMBER_WITHDRAW";
-                messageQueueTemplate.asyncSend(destination, memberWithdrawalMessage);
+                messageQueueTemplate.send(destination, memberWithdrawalMessage);
                 return true;
             }
             return false;

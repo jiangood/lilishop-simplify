@@ -2,8 +2,7 @@ package cn.lili.modules.permission.entity.vo;
 
 import cn.lili.common.utils.ObjectUtil;
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
@@ -34,6 +33,8 @@ public class SystemLog implements Serializable {
 
     @jakarta.persistence.Id
     @Schema(description = "id")
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(length = 36)
     private String id;
 
 

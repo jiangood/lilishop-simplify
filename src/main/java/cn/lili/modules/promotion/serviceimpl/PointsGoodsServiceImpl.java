@@ -223,7 +223,7 @@ public class PointsGoodsServiceImpl extends AbstractPromotionsServiceImpl<Points
         //修改规格索引,发送mq消息
         Map<String, Object> updateIndexFieldsMap = EsIndexUtil.getUpdateIndexFieldsMap(query, update);
         String destination = "goods:" + "UPDATE_GOODS_INDEX_FIELD";
-        messageQueueTemplate.asyncSend(destination, JSON.toJSONString(updateIndexFieldsMap));
+        messageQueueTemplate.send(destination, JSON.toJSONString(updateIndexFieldsMap));
     }
 
 

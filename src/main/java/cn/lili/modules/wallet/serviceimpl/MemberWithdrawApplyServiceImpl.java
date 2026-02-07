@@ -78,7 +78,7 @@ public class MemberWithdrawApplyServiceImpl extends ServiceImpl<MemberWithdrawAp
             memberWithdrawalMessage.setPrice(memberWithdrawApply.getApplyMoney());
 
             String destination = "member-topic" + ":" + MemberTagsEnum.MEMBER_WITHDRAWAL.name();
-            messageQueueTemplate.asyncSend(destination, memberWithdrawalMessage);
+            messageQueueTemplate.send(destination, memberWithdrawalMessage);
             return true;
         }
         throw new ServiceException(ResultCode.WALLET_APPLY_ERROR);

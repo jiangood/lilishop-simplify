@@ -331,7 +331,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
         this.updateById(member);
         String destination = "member:" + "MEMBER_INFO_EDIT";
         //发送订单变更mq消息
-        messageQueueTemplate.asyncSend(destination, member);
+        messageQueueTemplate.send(destination, member);
         return member;
     }
 

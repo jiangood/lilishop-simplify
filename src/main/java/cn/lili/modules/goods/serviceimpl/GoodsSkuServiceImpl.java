@@ -181,7 +181,7 @@ public class GoodsSkuServiceImpl extends ServiceImpl<GoodsSkuMapper, GoodsSku> i
 
             //发送mq消息
             String destination = "goods:" + "SKU_DELETE";
-            asyncSendIfPresent(destination, JSON.toJSONString(oldSkuIds));
+            sendIfPresent(destination, JSON.toJSONString(oldSkuIds));
         } else {
             skuList = new ArrayList<>();
             for (Map<String, Object> map : goodsOperationDTO.getSkuList()) {
@@ -279,14 +279,14 @@ public class GoodsSkuServiceImpl extends ServiceImpl<GoodsSkuMapper, GoodsSku> i
         if (goodsVO == null || goodsSku == null) {
             //发送mq消息
             String destination = "goods:" + "GOODS_DELETE";
-            asyncSendIfPresent(destination, JSON.toJSONString(Collections.singletonList(goodsId)));
+            sendIfPresent(destination, JSON.toJSONString(Collections.singletonList(goodsId)));
             throw new ServiceException(ResultCode.GOODS_NOT_EXIST);
         }
 
         //商品下架||商品未审核通过||商品删除，则提示：商品已下架
         if (GoodsStatusEnum.DOWN.name().equals(goodsVO.getMarketEnable()) || !GoodsAuthEnum.PASS.name().equals(goodsVO.getAuthFlag()) || Boolean.TRUE.equals(goodsVO.getDeleteFlag())) {
             String destination = "goods:" + "GOODS_DELETE";
-            asyncSendIfPresent(destination, JSON.toJSONString(Collections.singletonList(goodsId)));
+            sendIfPresent(destination, JSON.toJSONString(Collections.singletonList(goodsId)));
             throw new ServiceException(ResultCode.GOODS_NOT_EXIST);
         }
 
@@ -366,7 +366,7 @@ public class GoodsSkuServiceImpl extends ServiceImpl<GoodsSkuMapper, GoodsSku> i
         if (currentUser != null) {
             FootPrint footPrint = new FootPrint(currentUser.getId(), goodsIndex.getStoreId(), goodsId, skuId);
             String destination = "goods:" + "VIEW_GOODS";
-            asyncSendIfPresent(destination, footPrint);
+            sendIfPresent(destination, footPrint);
         }
         return map;
     }
@@ -1117,9 +1117,9 @@ public class GoodsSkuServiceImpl extends ServiceImpl<GoodsSkuMapper, GoodsSku> i
         skuListSheet.setColumnWidth(4, 30 * 256);
     }
 
-    private void asyncSendIfPresent(String destination, Object payload) {
+    private void sendIfPresent(String destination, Object payload) {
         if (messageQueueTemplate != null) {
-            messageQueueTemplate.asyncSend(destination, payload);
+            messageQueueTemplate.send(destination, payload);
         }
     }
 

@@ -184,7 +184,7 @@ public class StoreServiceImpl extends ServiceImpl<StoreMapper, Store> implements
             }
             String destination = "store-topic" + ":" + StoreTagsEnum.EDIT_STORE_SETTING.name();
             //发送订单变更mq消息
-            messageQueueTemplate.asyncSend(destination, store);
+            messageQueueTemplate.send(destination, store);
         }
 
         cache.remove(CachePrefix.STORE.getPrefix() + storeEditDTO.getStoreId());

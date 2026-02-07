@@ -104,7 +104,7 @@ public class ParametersServiceImpl extends ServiceImpl<ParametersMapper, Paramet
 //
 //            String destination = rocketmqCustomProperties.getGoodsTopic() + ":" + GoodsTagsEnum.UPDATE_GOODS_INDEX.name();
 //            //发送mq消息
-//            rocketMQTemplate.asyncSend(destination, JSON.toJSONString(goodsIds));
+//            rocketMQTemplate.send(destination, JSON.toJSONString(goodsIds));
 //        }
 
         Boolean isUpdate = this.updateById(goodsParamsDTO);
