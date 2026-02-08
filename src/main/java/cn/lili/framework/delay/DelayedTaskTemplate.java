@@ -19,37 +19,18 @@ import java.util.List;
 public class DelayedTaskTemplate {
 
 
-    private final DelayTaskRepository repo;
+    private final DelayedTaskService service;
 
     public void add(DelayTask task) {
-        repo.save(task);
+        service.save(task);
     }
 
 
     public void delete(String businessKey) {
-        repo.deleteByBusinessKey(businessKey);
+        service.deleteByBusinessKey(businessKey);
     }
 
-    @Scheduled(fixedDelay = 1000)
-    public void loopExecute() {
-        Date now = new Date();
-        List<DelayTask> list = repo.findByTimeBefore(now, PageRequest.of(0, 100, Sort.by("time")));
-        if (list.isEmpty()) {
-            return;
-        }
 
-        for (DelayTask task : list) {
-            String beanId = task.getBeanId();
-            Task taskBean = SpringUtil.getBean(beanId);
-            try {
-                taskBean.execute(task.getParams());
-                repo.deleteById(task.getId());
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-
-    }
 
 
 }

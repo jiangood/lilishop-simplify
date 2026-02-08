@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 
 
 @Entity
-@Table(name = "li_message_queue")
+@Table(name = "sys_message_queue")
 @Data
 public class MessageQueue implements Serializable {
 

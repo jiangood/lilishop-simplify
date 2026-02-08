@@ -49,7 +49,6 @@ public class MessageQueueProcessor {
     private boolean isRunning = false;
 
     // 单体程序可以由程序主动触发
-    @EventListener(MessageQueueAddEvent.class)
     @Scheduled(fixedDelay = 10, timeUnit = TimeUnit.SECONDS)
     public void triggerExecute() {
         if (isRunning) {

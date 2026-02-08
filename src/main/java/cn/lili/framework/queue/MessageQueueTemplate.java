@@ -15,14 +15,12 @@ public class MessageQueueTemplate {
 
     private final MessageQueueService messageQueueService;
 
-    private final ApplicationEventPublisher applicationEventPublisher;
 
 
     public void send(Topic topic, String tag, Object message) {
         try {
             messageQueueService.send(topic, tag, message);
 
-            applicationEventPublisher.publishEvent(new MessageQueueAddEvent());
             log.info("Message sent synchronously: {} {}", topic, tag);
         } catch (Exception e) {
             log.error("Failed to send message synchronously: {}", e.getMessage(), e);

@@ -64,6 +64,7 @@ import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 import static cn.lili.rocketmq.tags.MemberTagsEnum.MEMBER_INFO_EDIT;
+import static cn.lili.rocketmq.tags.MemberTagsEnum.MEMBER_REGISTER;
 
 /**
  * 会员接口业务层实现
@@ -321,7 +322,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
         this.save(member);
         UserContext.settingInviter(member.getId(), cache);
         // 发送会员注册信息
-        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("new member register", Topic.MEMBER, "MEMBER_REGISTER", member));
+        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("new member register", Topic.MEMBER, MEMBER_REGISTER.name(), member));
     }
 
     @Override

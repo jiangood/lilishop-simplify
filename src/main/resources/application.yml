@@ -12,6 +12,9 @@ spring:
       #关闭jackson 对json做解析
       fail-on-empty-beans: false
 
+  jpa:
+    generate-ddl: true
+    show-sql: true
   # 数据源配置
   datasource:
     url: jdbc:mysql://127.0.0.1:3306/lilishop?useUnicode=true&characterEncoding=utf-8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
@@ -111,7 +114,10 @@ springdoc:
   swagger-ui:
     path: /swagger-ui/index.html
   packages-to-scan: cn.lili.controller
-  paths-to-match: /buyer/**
+  paths-to-match:
+    - /buyer/**
+    - /store/**
+    - /manager/**
 
 lili:
   system:
@@ -136,6 +142,3 @@ lili:
     corePoolSize: 5
     maxPoolSize: 50
     queueCapacity: 50
-  data:
-    logstash:
-      server: 192.168.0.116:4560

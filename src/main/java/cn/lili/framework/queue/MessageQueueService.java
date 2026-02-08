@@ -6,6 +6,7 @@ import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +21,7 @@ public class MessageQueueService  {
     @Resource
     private MessageQueueRepository messageQueueRepository;
 
+    @Async
     @Transactional
     public void send(Topic topic, String tag, Object message) {
         MessageQueue messageQueue = new MessageQueue();
@@ -27,7 +29,7 @@ public class MessageQueueService  {
         messageQueue.setTag(tag);
         messageQueue.setBody(JSONUtil.toJsonStr(message));
         messageQueue.setStatus(0);
-        messageQueueRepository.save(messageQueue);
+        messageQueueRepository.saveAndFlush(messageQueue);
     }
 
 
