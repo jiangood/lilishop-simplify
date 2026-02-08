@@ -6,21 +6,12 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
-/**
- * Transaction commit send message listener
- * <p>
- * Listens for transaction commit events and sends messages
- *
- * @author Trae
- * @since 2026-02-07
- */
+
 @Slf4j
 @Component
 public class TransactionCommitSendMessageListener {
 
-    /**
-     * Message queue template
-     */
+
     @Autowired
     private MessageQueueTemplate messageQueueTemplate;
 

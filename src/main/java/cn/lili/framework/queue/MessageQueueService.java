@@ -33,9 +33,6 @@ public class MessageQueueService  {
     }
 
 
-
-
-
     public List<MessageQueue> findPending( int limit) {
         PageRequest pageable = PageRequest.of(0, limit, Sort.by("id"));
         return messageQueueRepository.findByStatus( 0, pageable).getContent();
