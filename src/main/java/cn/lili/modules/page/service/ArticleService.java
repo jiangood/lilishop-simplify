@@ -1,98 +1,102 @@
 package cn.lili.modules.page.service;
 
+
+import cn.hutool.core.text.CharSequenceUtil;
+import cn.lili.common.enums.ResultCode;
+import cn.lili.common.exception.ServiceException;
+import cn.lili.common.utils.BeanUtil;
 import cn.lili.modules.page.entity.dos.Article;
 import cn.lili.modules.page.entity.dto.ArticleSearchParams;
+import cn.lili.modules.page.entity.enums.ArticleEnum;
 import cn.lili.modules.page.entity.vos.ArticleVO;
+import cn.lili.modules.page.mapper.ArticleMapper;
+import cn.lili.modules.page.service.ArticleService;
+import cn.lili.mybatis.util.PageUtil;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.service.IService;
-import org.springframework.cache.annotation.CacheConfig;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
+import com.baomidou.mybatisplus.core.toolkit.StringUtils;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
 
-
 /**
- * 文章业务层
+ * 文章业务层实现
  *
- * @author pikachu
+ * @author Chopper
  * @since 2020/11/18 11:40 上午
  */
-@CacheConfig(cacheNames = "{article}")
-public interface ArticleService extends IService<Article> {
+@Service
+public class ArticleService extends ServiceImpl<ArticleMapper, Article>  {
 
-    /**
-     * 管理端获取文章
-     * @param articleSearchParams
-     * @return
-     */
-    IPage<ArticleVO> managerArticlePage(ArticleSearchParams articleSearchParams);
-    /**
-     * 获取文章分页
-     *
-     * @param articleSearchParams 文章搜索条件
-     * @return 文章分页
-     */
-    IPage<ArticleVO> articlePage(ArticleSearchParams articleSearchParams);
+    
+    public IPage<ArticleVO> managerArticlePage(ArticleSearchParams articleSearchParams) {
+        articleSearchParams.setSort("a.sort");
+        return this.baseMapper.getArticleList(PageUtil.initPage(articleSearchParams), articleSearchParams.queryWrapper());
+    }
 
-    /**
-     * 获取文章分页
-     *
-     * @param categoryId 文章分类ID
-     * @return 文章分页
-     */
-    List<Article> list(String categoryId);
+    
+    public IPage<ArticleVO> articlePage(ArticleSearchParams articleSearchParams) {
+        articleSearchParams.setSort("a.sort");
+        QueryWrapper queryWrapper = articleSearchParams.queryWrapper();
+        queryWrapper.eq("open_status", true);
+        return this.baseMapper.getArticleList(PageUtil.initPage(articleSearchParams), queryWrapper);
+    }
 
-    /**
-     * 修改文章内容
-     *
-     * @param article 文章
-     * @return 修改后的文章
-     */
-    @CacheEvict(key = "#article.id")
-    Article updateArticle(Article article);
+    
+    public List<Article> list(String categoryId) {
 
-    /**
-     * 删除文章--id
-     *
-     * @param id
-     */
-    @CacheEvict(key = "#id")
-    void customRemove(String id);
+        QueryWrapper<Article> queryWrapper = Wrappers.query();
+        queryWrapper.eq(StringUtils.isNotBlank(categoryId), "category_id", categoryId);
+        return this.list(queryWrapper);
+    }
 
-    /**
-     * 读取文章
-     *
-     * @param id
-     * @return 文章
-     */
-    @Cacheable(key = "#id")
-    Article customGet(String id);
 
-    /**
-     * 读取文章
-     *
-     * @param type
-     * @return 文章
-     */
-    @Cacheable(key = "#type")
-    Article customGetByType(String type);
+    
+    public Article updateArticle(Article article) {
+        Article oldArticle = this.getById(article.getId());
+        BeanUtil.copyProperties(article, oldArticle);
+        this.updateById(oldArticle);
+        return oldArticle;
+    }
 
-    /**
-     * 修改文章状态
-     *
-     * @param id     文章ID
-     * @param status 显示状态
-     * @return 操作状态
-     */
-    @CacheEvict(key = "#id")
-    Boolean updateArticleStatus(String id, boolean status);
+    
+    public void customRemove(String id) {
+        //判断是否为默认文章
+        if (this.getById(id).getType().equals(ArticleEnum.OTHER.name())) {
+            this.removeById(id);
+        } else {
+            throw new ServiceException(ResultCode.ARTICLE_NO_DELETION);
+        }
+    }
 
-    /**
-     * 修改文章--文章类型修改
-     * @param article
-     * @return
-     */
-    @CacheEvict(key = "#article.type")
-    Article updateArticleType(Article article);
+    
+    public Article customGet(String id) {
+        return this.getById(id);
+    }
+
+    
+    public Article customGetByType(String type) {
+        if (!CharSequenceUtil.equals(type, ArticleEnum.OTHER.name())) {
+            return this.getOne(new LambdaUpdateWrapper<Article>().eq(Article::getType, type));
+        }
+        return null;
+    }
+
+    
+    public Boolean updateArticleStatus(String id, boolean status) {
+        Article article = this.getById(id);
+        article.setOpenStatus(status);
+        return this.updateById(article);
+    }
+
+    
+    public Article updateArticleType(Article article) {
+        Article oldArticle = this.getById(article.getId());
+        BeanUtil.copyProperties(article, oldArticle);
+        this.updateById(oldArticle);
+        return oldArticle;
+    }
 }

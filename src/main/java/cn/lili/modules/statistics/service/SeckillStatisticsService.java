@@ -1,22 +1,32 @@
 package cn.lili.modules.statistics.service;
 
 import cn.lili.modules.promotion.entity.dos.Seckill;
-import com.baomidou.mybatisplus.extension.service.IService;
+import cn.lili.modules.promotion.entity.enums.PromotionsStatusEnum;
+import cn.lili.modules.promotion.tools.PromotionTools;
+import cn.lili.modules.statistics.mapper.SeckillStatisticsMapper;
+import cn.lili.modules.statistics.service.SeckillStatisticsService;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.stereotype.Service;
 
 /**
- * 秒杀统计
+ * 秒杀活动统计
  *
  * @author Chopper
- * @since 2020/11/18 9:45 上午
+ * @since 2020/8/21
  */
-public interface SeckillStatisticsService extends IService<Seckill> {
+@Service
+public class SeckillStatisticsService extends ServiceImpl<SeckillStatisticsMapper, Seckill>  {
 
 
-    /**
-     * 获取当前可参与的活动数量
-     *
-     * @return 可参与活动数量
-     */
-    long getApplyNum();
+    
+    public long getApplyNum() {
+        QueryWrapper<Seckill> queryWrapper = Wrappers.query();
+        //秒杀申请时间未超过当前时间
+        queryWrapper.ge("apply_end_time", cn.hutool.core.date.DateUtil.date());
+        queryWrapper.and(PromotionTools.queryPromotionStatus(PromotionsStatusEnum.START));
+        return this.count(queryWrapper);
+    }
 
 }

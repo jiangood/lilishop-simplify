@@ -1,47 +1,76 @@
 package cn.lili.modules.member.service;
 
+import cn.lili.common.enums.ResultCode;
+import cn.lili.common.exception.ServiceException;
+import cn.lili.common.security.context.UserContext;
 import cn.lili.common.vo.PageVO;
 import cn.lili.modules.member.entity.dos.StoreCollection;
+import cn.lili.modules.member.entity.dto.CollectionDTO;
 import cn.lili.modules.member.entity.vo.StoreCollectionVO;
+import cn.lili.modules.member.mapper.StoreCollectionMapper;
+import cn.lili.modules.member.service.StoreCollectionService;
+import cn.lili.modules.store.service.StoreService;
+import cn.lili.mybatis.util.PageUtil;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.service.IService;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Optional;
 
 /**
- * 店铺收藏业务层
+ * 会员店铺收藏业务层实现
  *
  * @author Chopper
  * @since 2020/11/18 2:52 下午
  */
-public interface StoreCollectionService extends IService<StoreCollection> {
+@Service
+public class StoreCollectionService extends ServiceImpl<StoreCollectionMapper, StoreCollection>  {
 
-    /**
-     * 店铺收藏分页
-     * @param pageVo 分页VO
-     * @return 店铺收藏分页列表
-     */
-    IPage<StoreCollectionVO> storeCollection(PageVO pageVo);
 
-    /**
-     * 是否收藏此店铺
-     *
-     * @param storeId 店铺ID
-     * @return 是否收藏
-     */
-    boolean isCollection(String storeId);
+    @Autowired
+    private StoreService storeService;
 
-    /**
-     * 店铺商品收藏
-     *
-     * @param storeId 店铺ID
-     * @return 操作状态
-     */
-    StoreCollection addStoreCollection(String storeId);
+    
+    public IPage<StoreCollectionVO> storeCollection(PageVO pageVo) {
+        QueryWrapper<StoreCollectionVO> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("sc.member_id", UserContext.getCurrentUser().getId());
+        queryWrapper.orderByDesc("sc.create_time");
+        return this.baseMapper.storeCollectionVOList(PageUtil.initPage(pageVo), queryWrapper);
+    }
 
-    /**
-     * 店铺收藏
-     *
-     * @param storeId 店铺ID
-     * @return 操作状态
-     */
-    boolean deleteStoreCollection(String storeId);
+    
+    public boolean isCollection(String storeId) {
+        QueryWrapper<StoreCollection> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("member_id", UserContext.getCurrentUser().getId());
+        queryWrapper.eq("store_id", storeId);
+        return Optional.ofNullable(this.getOne(queryWrapper, false)).isPresent();
+    }
+
+    
+    @Transactional(rollbackFor = Exception.class)
+    public StoreCollection addStoreCollection(String storeId) {
+        if (this.getOne(new LambdaUpdateWrapper<StoreCollection>()
+                .eq(StoreCollection::getMemberId, UserContext.getCurrentUser().getId())
+                .eq(StoreCollection::getStoreId, storeId)) == null) {
+            StoreCollection storeCollection = new StoreCollection(UserContext.getCurrentUser().getId(), storeId);
+            this.save(storeCollection);
+            storeService.updateStoreCollectionNum(new CollectionDTO(storeId, 1));
+            return storeCollection;
+        }
+        throw new ServiceException(ResultCode.USER_COLLECTION_EXIST);
+    }
+
+    
+    @Transactional(rollbackFor = Exception.class)
+    public boolean deleteStoreCollection(String storeId) {
+        QueryWrapper<StoreCollection> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("member_id", UserContext.getCurrentUser().getId());
+        queryWrapper.eq("store_id", storeId);
+        storeService.updateStoreCollectionNum(new CollectionDTO(storeId, -1));
+        return this.remove(queryWrapper);
+    }
 }

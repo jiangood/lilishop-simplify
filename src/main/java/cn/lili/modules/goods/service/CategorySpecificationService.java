@@ -2,30 +2,30 @@ package cn.lili.modules.goods.service;
 
 import cn.lili.modules.goods.entity.dos.CategorySpecification;
 import cn.lili.modules.goods.entity.dos.Specification;
-import com.baomidou.mybatisplus.extension.service.IService;
+import cn.lili.modules.goods.mapper.CategorySpecificationMapper;
+import cn.lili.modules.goods.service.CategorySpecificationService;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 /**
- * 商品分类规格业务层
+ * 商品分类规格业务层实现
  *
  * @author pikachu
- * @since 2020-02-26 16:18:56
+ * @since 2020-02-23 15:18:56
  */
-public interface CategorySpecificationService extends IService<CategorySpecification> {
-    /**
-     * 根据分类id查询规格信息
-     *
-     * @param categoryId 分类id
-     * @return 分类规格关联信息
-     */
-    List<Specification> getCategorySpecList(String categoryId);
+@Service
+public class CategorySpecificationService extends ServiceImpl<CategorySpecificationMapper, CategorySpecification>  {
 
+    
+    public List<Specification> getCategorySpecList(String categoryId) {
+        return this.baseMapper.getCategorySpecList(categoryId);
+    }
 
-    /**
-     * 通过分类ID删除关联规格
-     *
-     * @param categoryId 分类ID
-     */
-    void deleteByCategoryId(String categoryId);
+    
+    public void deleteByCategoryId(String categoryId) {
+        this.baseMapper.delete(new LambdaQueryWrapper<CategorySpecification>().eq(CategorySpecification::getCategoryId, categoryId));
+    }
 }

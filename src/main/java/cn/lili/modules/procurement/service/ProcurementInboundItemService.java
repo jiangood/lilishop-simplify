@@ -1,13 +1,16 @@
 package cn.lili.modules.procurement.service;
 
 import cn.lili.modules.procurement.entity.dos.ProcurementInboundItem;
-import com.baomidou.mybatisplus.extension.service.IService;
+import cn.lili.modules.procurement.mapper.ProcurementInboundItemMapper;
+import cn.lili.modules.procurement.service.ProcurementInboundItemService;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.stereotype.Service;
 
 /**
- * 采购入库明细业务接口
- * 定义入库明细的基础操作能力
+ * 采购入库明细业务实现
  * @author Bulbasaur
  * @since 2025-12-18
  */
-public interface ProcurementInboundItemService extends IService<ProcurementInboundItem> {
+@Service
+public class ProcurementInboundItemService extends ServiceImpl<ProcurementInboundItemMapper, ProcurementInboundItem>  {
 }

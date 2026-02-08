@@ -1,61 +1,70 @@
 package cn.lili.modules.order.order.service;
 
+import cn.lili.common.enums.ResultCode;
+import cn.lili.common.exception.ServiceException;
+import cn.lili.mybatis.util.PageUtil;
 import cn.lili.common.vo.PageVO;
 import cn.lili.modules.order.order.entity.dos.Receipt;
 import cn.lili.modules.order.order.entity.dto.OrderReceiptDTO;
 import cn.lili.modules.order.order.entity.dto.ReceiptSearchParams;
+import cn.lili.modules.order.order.mapper.ReceiptMapper;
+import cn.lili.modules.order.order.service.ReceiptService;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.service.IService;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.stereotype.Service;
 
 /**
- * 发票业务层
+ * 发票业务层实现
  *
  * @author Bulbasaur
- * @since 2020/11/17 7:37 下午
+ * @since 2020/11/17 7:38 下午
  */
-public interface ReceiptService extends IService<Receipt> {
+@Service
+public class ReceiptService extends ServiceImpl<ReceiptMapper, Receipt>  {
 
+    
+    public IPage<OrderReceiptDTO> getReceiptData(ReceiptSearchParams searchParams, PageVO pageVO) {
+        return this.baseMapper.getReceipt(PageUtil.initPage(pageVO), searchParams.wrapper());
+    }
 
-    /**
-     * 根据条件获取发票信息列表
-     *
-     * @param searchParams 发票查询参数
-     * @param pageVO       分页参数
-     * @return 发票信息列表
-     */
-    IPage<OrderReceiptDTO> getReceiptData(ReceiptSearchParams searchParams, PageVO pageVO);
+    
+    public Receipt getByOrderSn(String orderSn) {
+        LambdaQueryWrapper<Receipt> lambdaQueryWrapper = Wrappers.lambdaQuery();
+        lambdaQueryWrapper.eq(Receipt::getOrderSn, orderSn);
+        return this.getOne(lambdaQueryWrapper);
+    }
 
-    /**
-     * 根据订单编号获取发票信息
-     *
-     * @param orderSn 订单编号
-     * @return 发票
-     */
-    Receipt getByOrderSn(String orderSn);
+    
+    public Receipt getDetail(String id) {
+        return this.getById(id);
+    }
 
-    /**
-     * 获取发票详情
-     *
-     * @param id 发票id
-     * @return 发票详情
-     */
-    Receipt getDetail(String id);
+    
+    public Receipt saveReceipt(Receipt receipt) {
+        LambdaQueryWrapper<Receipt> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(Receipt::getReceiptTitle, receipt.getReceiptTitle());
+        queryWrapper.eq(Receipt::getMemberId, receipt.getMemberId());
+        if (receipt.getId() != null) {
+            queryWrapper.ne(Receipt::getId, receipt.getId());
+        }
+        if (this.getOne(queryWrapper) == null) {
+            this.save(receipt);
+            return receipt;
+        }
+        return null;
+    }
 
-    /**
-     * 保存发票
-     *
-     * @param receipt 发票信息
-     * @return 是否保存成功
-     */
-    Receipt saveReceipt(Receipt receipt);
-
-    /**
-     * 开具发票
-     *
-     * @param receiptId 发票id
-     * @return
-     */
-    Receipt invoicing(String receiptId);
-
-
+    
+    public Receipt invoicing(String receiptId) {
+        //根据id查询发票信息
+        Receipt receipt = this.getById(receiptId);
+        if (receipt != null) {
+            receipt.setReceiptStatus(1);
+            this.saveOrUpdate(receipt);
+            return receipt;
+        }
+        throw new ServiceException(ResultCode.USER_RECEIPT_NOT_EXIST);
+    }
 }

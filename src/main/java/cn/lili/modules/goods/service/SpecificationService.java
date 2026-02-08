@@ -1,25 +1,56 @@
 package cn.lili.modules.goods.service;
 
-
+import com.alibaba.fastjson2.JSON;
+import cn.lili.common.enums.ResultCode;
+import cn.lili.common.exception.ServiceException;
+import cn.lili.modules.goods.entity.dos.CategorySpecification;
 import cn.lili.modules.goods.entity.dos.Specification;
-import com.baomidou.mybatisplus.extension.service.IService;
+import cn.lili.modules.goods.mapper.SpecificationMapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 规格业务层
+ * 商品规格业务层实现
  *
  * @author pikachu
- * @since 2020-02-18 15:18:56
+ * @since 2020-02-18 16:18:56
  */
-public interface SpecificationService extends IService<Specification> {
+@Service
+public class SpecificationService extends ServiceImpl<SpecificationMapper, Specification>  {
 
     /**
-     * 删除规格
-     *
-     * @param ids 规格ID
-     * @return 是否删除成功
+     * 分类-规格绑定
      */
-    boolean deleteSpecification(List<String> ids);
+    @Autowired
+    private CategorySpecificationService categorySpecificationService;
+    /**
+     * 分类
+     */
+    @Autowired
+    private CategoryService categoryService;
+
+
+    
+    public boolean deleteSpecification(List<String> ids) {
+        boolean result = false;
+        for (String id : ids) {
+            //如果此规格绑定分类则不允许删除
+            List<CategorySpecification> list = categorySpecificationService.list(new QueryWrapper<CategorySpecification>().eq("specification_id", id));
+            if (!list.isEmpty()) {
+                List<String> categoryIds = new ArrayList<>();
+                list.forEach(item -> categoryIds.add(item.getCategoryId()));
+                throw new ServiceException(ResultCode.SPEC_DELETE_ERROR,
+                        JSON.toJSONString(categoryService.getCategoryNameByIds(categoryIds)));
+            }
+            //删除规格
+            result = this.removeById(id);
+        }
+        return result;
+    }
 
 }

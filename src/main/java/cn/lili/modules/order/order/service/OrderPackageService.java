@@ -1,31 +1,64 @@
 package cn.lili.modules.order.order.service;
 
+import cn.lili.common.enums.ResultCode;
+import cn.lili.common.exception.ServiceException;
 import cn.lili.modules.order.order.entity.dos.OrderPackage;
+import cn.lili.modules.order.order.entity.dos.OrderPackageItem;
 import cn.lili.modules.order.order.entity.vo.OrderPackageVO;
-import com.baomidou.mybatisplus.extension.service.IService;
+import cn.lili.modules.order.order.mapper.OrderPackageMapper;
+import cn.lili.modules.order.order.service.OrderPackageItemService;
+import cn.lili.modules.order.order.service.OrderPackageService;
+import cn.lili.modules.system.entity.vo.Traces;
+import cn.lili.modules.system.service.LogisticsService;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 子订单业务层
+ * 订单包裹业务层实现
  *
  * @author Chopper
- * @since 2020/11/17 7:36 下午
+ * @since 2020/11/17 7:38 下午
  */
-public interface OrderPackageService extends IService<OrderPackage> {
+@Service
+@Transactional(rollbackFor = Exception.class)
+public class OrderPackageService extends ServiceImpl<OrderPackageMapper, OrderPackage>  {
 
+    @Autowired
+    private OrderPackageItemService orderpackageItemService;
 
-    /**
-     * 根据订单编号获取订单包裹列表
-     * @param orderSn
-     * @return
-     */
-    List<OrderPackage> orderPackageList(String orderSn);
+    @Autowired
+    private LogisticsService logisticsService;
 
-    /**
-     * 获取指定订单编号的所有包裹
-     * @param orderSn
-     * @return
-     */
-    List<OrderPackageVO> getOrderPackageVOList(String orderSn);
+    
+    public List<OrderPackage> orderPackageList(String orderSn) {
+        return this.list(new LambdaQueryWrapper<OrderPackage>().eq(OrderPackage::getOrderSn, orderSn));
+    }
+
+    
+    public List<OrderPackageVO> getOrderPackageVOList(String orderSn) {
+        List<OrderPackage> orderPackages = this.orderPackageList(orderSn);
+        if (orderPackages == null){
+            throw new ServiceException(ResultCode.ORDER_PACKAGE_NOT_EXIST);
+        }
+        List<OrderPackageVO> orderPackageVOS = new ArrayList<>();
+        orderPackages.forEach(orderPackage -> {
+            OrderPackageVO orderPackageVO = new OrderPackageVO(orderPackage);
+            // 获取子订单包裹详情
+            List<OrderPackageItem> orderPackageItemList = orderpackageItemService.getOrderPackageItemListByPno(orderPackage.getPackageNo());
+            orderPackageVO.setOrderPackageItemList(orderPackageItemList);
+            String str = orderPackage.getConsigneeMobile();
+            str = str.substring(str.length() - 4);
+            Traces traces = logisticsService.getLogisticTrack(orderPackage.getLogisticsCode(), orderPackage.getLogisticsNo(), str);
+            orderPackageVO.setTraces(traces);
+            orderPackageVOS.add(orderPackageVO);
+        });
+
+        return orderPackageVOS;
+    }
 }

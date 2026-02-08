@@ -1,14 +1,17 @@
 package cn.lili.modules.system.service;
 
-import com.baomidou.mybatisplus.extension.service.IService;
 import cn.lili.modules.system.entity.dos.ServiceNotice;
+import cn.lili.modules.system.mapper.ServiceNoticeMapper;
+import cn.lili.modules.system.service.ServiceNoticeService;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.stereotype.Service;
 
 /**
- * 服务订阅消息业务层
- *
+ * 服务订阅消息业务层实现
  * @author Chopper
  * @since 2020/11/17 8:02 下午
  */
-public interface ServiceNoticeService extends IService<ServiceNotice> {
+@Service
+public class ServiceNoticeService extends ServiceImpl<ServiceNoticeMapper, ServiceNotice>  {
 
 }

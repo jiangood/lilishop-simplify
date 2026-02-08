@@ -1,23 +1,28 @@
 package cn.lili.modules.order.aftersale.service;
 
 import cn.lili.modules.order.aftersale.entity.dos.AfterSaleLog;
-import com.baomidou.mybatisplus.extension.service.IService;
+import cn.lili.modules.order.aftersale.mapper.AfterSaleLogMapper;
+import cn.lili.modules.order.aftersale.service.AfterSaleLogService;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 /**
- * 订单日志业务层
+ * 订单日志业务层实现
  *
  * @author Chopper
  * @since 2020/11/17 7:37 下午
  */
-public interface AfterSaleLogService extends IService<AfterSaleLog> {
+@Service
+public class AfterSaleLogService extends ServiceImpl<AfterSaleLogMapper, AfterSaleLog>  {
 
-    /**
-     * 获取售后日志
-     *
-     * @param sn 售后编号
-     * @return 售后日志列表
-     */
-    List<AfterSaleLog> getAfterSaleLog(String sn);
+    
+    public List<AfterSaleLog> getAfterSaleLog(String sn) {
+        QueryWrapper queryWrapper = Wrappers.query();
+        queryWrapper.eq("sn", sn);
+        return this.list(queryWrapper);
+    }
 }

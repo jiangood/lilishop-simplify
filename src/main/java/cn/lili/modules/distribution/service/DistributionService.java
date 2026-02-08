@@ -1,119 +1,210 @@
 package cn.lili.modules.distribution.service;
 
+import cn.hutool.json.JSONUtil;
+import cn.lili.cache.Cache;
+import cn.lili.cache.CachePrefix;
+import cn.lili.common.enums.ResultCode;
+import cn.lili.common.exception.ServiceException;
+import cn.lili.common.security.context.UserContext;
+import cn.lili.common.utils.BeanUtil;
 import cn.lili.common.vo.PageVO;
 import cn.lili.modules.distribution.entity.dos.Distribution;
 import cn.lili.modules.distribution.entity.dto.DistributionApplyDTO;
 import cn.lili.modules.distribution.entity.dto.DistributionSearchParams;
+import cn.lili.modules.distribution.entity.enums.DistributionStatusEnum;
+import cn.lili.modules.distribution.mapper.DistributionMapper;
+import cn.lili.modules.distribution.service.DistributionService;
+import cn.lili.modules.member.entity.dos.Member;
+import cn.lili.modules.member.service.MemberService;
+import cn.lili.modules.system.entity.dos.Setting;
+import cn.lili.modules.system.entity.dto.DistributionSetting;
+import cn.lili.modules.system.entity.enums.SettingEnum;
+import cn.lili.modules.system.service.SettingService;
+import cn.lili.mybatis.util.PageUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.service.IService;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 /**
- * 分销员业务层
+ * 分销员接口实现
  *
  * @author pikachu
  * @since 2020-03-14 23:04:56
  */
-public interface DistributionService extends IService<Distribution> {
+@Service
+public class DistributionService extends ServiceImpl<DistributionMapper, Distribution>  {
 
     /**
-     * 获取分销员分页列表
-     *
-     * @param distributionSearchParams 分销员
-     * @param page                     分页
-     * @return
+     * 会员
      */
-    IPage<Distribution> distributionPage(DistributionSearchParams distributionSearchParams, PageVO page);
-
+    @Autowired
+    private MemberService memberService;
     /**
-     * 获取当前登录的会员的分销员信息
-     *
-     * @return
+     * 缓存
      */
-    Distribution getDistribution();
-
+    @Autowired
+    private Cache cache;
     /**
-     * 提交分销申请
-     *
-     * @param distributionApplyDTO 分销申请DTO
-     * @return 分销员
+     * 设置
      */
-    Distribution applyDistribution(DistributionApplyDTO distributionApplyDTO);
+    @Autowired
+    private SettingService settingService;
 
-    /**
-     * 审核分销申请
-     *
-     * @param id     分销员ID
-     * @param status 审核状态
-     * @return 操作状态
-     */
-    boolean audit(String id, String status);
+    
+    public IPage<Distribution> distributionPage(DistributionSearchParams distributionSearchParams, PageVO page) {
+        return this.page(PageUtil.initPage(page), distributionSearchParams.queryWrapper());
+    }
 
-    /**
-     * 清退分销员
-     *
-     * @param id 分销员ID
-     * @return 操作状态
-     */
-    boolean retreat(String id);
+    
+    public Distribution getDistribution() {
 
-    /**
-     * 恢复分销员
-     *
-     * @param id 分销员ID
-     * @return 操作状态
-     */
-    boolean resume(String id);
+        return this.getOne(new LambdaQueryWrapper<Distribution>().eq(Distribution::getMemberId, UserContext.getCurrentUser().getId()));
 
-    /**
-     * 绑定会员的分销员关系
-     *
-     * @param distributionId 分销员ID
-     */
-    void bindingDistribution(String distributionId);
+    }
+
+    
+    @Transactional(rollbackFor = Exception.class)
+    public Distribution applyDistribution(DistributionApplyDTO distributionApplyDTO) {
+
+        //检查分销开关
+        checkDistributionSetting();
+
+        //判断用户是否申请过分销
+        Distribution distribution = getDistribution();
+
+        //如果分销员非空并未审核则提示用户请等待，如果分销员为拒绝状态则重新提交申请
+        if (Optional.ofNullable(distribution).isPresent()) {
+            switch (DistributionStatusEnum.valueOf(distribution.getDistributionStatus())) {
+                case REFUSE:
+                case RETREAT:
+                    distribution.setDistributionStatus(DistributionStatusEnum.APPLY.name());
+                    BeanUtil.copyProperties(distributionApplyDTO, distribution);
+                    this.updateById(distribution);
+                    return distribution;
+                default:
+                    throw new ServiceException(ResultCode.DISTRIBUTION_IS_APPLY);
+            }
+        } else {
+            //如果未申请分销员则新增进行申请
+            //获取当前登录用户
+            Member member = memberService.getUserInfo();
+            //新建分销员
+            distribution = new Distribution(member.getId(), member.getNickName(), distributionApplyDTO);
+            //添加分销员
+            this.save(distribution);
+        }
+        return distribution;
+    }
+
+    
+    public boolean audit(String id, String status) {
+
+        //检查分销开关
+        checkDistributionSetting();
+
+        //根据id获取分销员
+        Distribution distribution = this.getById(id);
+        if (Optional.ofNullable(distribution).isPresent()) {
+            if (status.equals(DistributionStatusEnum.PASS.name())) {
+                distribution.setDistributionStatus(DistributionStatusEnum.PASS.name());
+            } else {
+                distribution.setDistributionStatus(DistributionStatusEnum.REFUSE.name());
+            }
+            return this.updateById(distribution);
+        }
+        return false;
+    }
+
+    
+    public boolean retreat(String id) {
+
+        //检查分销开关
+        checkDistributionSetting();
+
+        //根据id获取分销员
+        Distribution distribution = this.getById(id);
+        if (Optional.ofNullable(distribution).isPresent()) {
+            distribution.setDistributionStatus(DistributionStatusEnum.RETREAT.name());
+            return this.updateById(distribution);
+        }
+        return false;
+    }
+
+    
+    public boolean resume(String id) {
+
+        //检查分销开关
+        checkDistributionSetting();
+
+        //根据id获取分销员
+        Distribution distribution = this.getById(id);
+        if (Optional.ofNullable(distribution).isPresent()) {
+            distribution.setDistributionStatus(DistributionStatusEnum.PASS.name());
+            return this.updateById(distribution);
+        }
+        return false;
+    }
+
+    
+    public void bindingDistribution(String distributionId) {
+
+        //判断用户是否登录，未登录不能进行绑定
+        if (UserContext.getCurrentUser() == null) {
+            throw new ServiceException(ResultCode.USER_NOT_LOGIN);
+        }
+        //储存分销关系时间
+        Distribution distribution = this.getById(distributionId);
+        if (distribution != null) {
+            Setting setting = settingService.get(SettingEnum.DISTRIBUTION_SETTING.name());
+            DistributionSetting distributionSetting = JSONUtil.toBean(setting.getSettingValue(), DistributionSetting.class);
+            cache.put(CachePrefix.DISTRIBUTION.getPrefix() + "_" + UserContext.getCurrentUser().getId(), distribution.getId(), distributionSetting.getDistributionDay().longValue(), TimeUnit.DAYS);
+        }
+
+    }
 
     /**
      * 检查分销设置开关
      */
-    void checkDistributionSetting();
+    
+    public void checkDistributionSetting() {
+        //获取分销是否开启
+        Setting setting = settingService.get(SettingEnum.DISTRIBUTION_SETTING.name());
+        DistributionSetting distributionSetting = JSONUtil.toBean(setting.getSettingValue(), DistributionSetting.class);
+        if (Boolean.FALSE.equals(distributionSetting.getIsOpen())) {
+            throw new ServiceException(ResultCode.DISTRIBUTION_CLOSE);
+        }
+    }
 
-    /**
-     * 添加分销冻结金额
-     * 创建分销订单时进行调用
-     *
-     * @param rebate         金额
-     * @param distributionId 分销员ID
-     * @param distributionOrderPrice 分销订单金额
-     */
-    void addRebate(Double rebate, String distributionId, Double distributionOrderPrice);
 
-    /**
-     * 扣减分销冻结金额
-     * 订单取消/退款时进行调用
-     *
-     * @param rebate      佣金
-     * @param distributionId 分销员ID
-     */
-    void subRebate(Double rebate, String distributionId, Double distributionOrderPrice);
+    
+    public void subRebate(Double canRebate, String distributionId, Double distributionOrderPrice) {
+        this.baseMapper.subRebate(canRebate, distributionId, distributionOrderPrice);
+    }
 
-    /**
-     * 添加分销可提现金额
-     * 订单完成时进行调用
-     * @param rebate 佣金
-     * @param distributionId 分销员ID
-     */
-    void addCanRebate(Double rebate, String distributionId);
+    
+    public void addRebate(Double rebate, String distributionId, Double distributionOrderPrice) {
+        this.baseMapper.addRebate(rebate, distributionId, distributionOrderPrice);
+    }
 
-    /**
-     * 添加提现金额
-     * @param rebate
-     * @param distributionId
-     */
-    void addCashRebate(Double rebate, String distributionId);
-    /**
-     * 扣减提现金额
-     * @param rebate
-     * @param distributionId
-     */
-    void subCashRebate(Double rebate, String distributionId);
+    
+    public void addCanRebate(Double rebate, String distributionId) {
+        this.baseMapper.addCanRebate(rebate, distributionId);
+    }
+
+    
+    public void addCashRebate(Double rebate, String distributionId) {
+        this.baseMapper.addCashRebate(rebate, distributionId);
+    }
+
+    
+    public void subCashRebate(Double rebate, String distributionId) {
+        this.baseMapper.subCashRebate(rebate, distributionId);
+    }
+
 }

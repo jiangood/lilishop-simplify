@@ -1,47 +1,77 @@
 package cn.lili.modules.permission.service;
 
+import cn.lili.cache.Cache;
+import cn.lili.cache.CachePrefix;
+import cn.lili.common.security.enums.UserEnums;
 import cn.lili.modules.permission.entity.dos.RoleMenu;
-import com.baomidou.mybatisplus.extension.service.IService;
+import cn.lili.modules.permission.mapper.RoleMenuMapper;
+import cn.lili.modules.permission.service.RoleMenuService;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 /**
- * 角色菜单接口
+ * 角色菜单业务层实现
  *
  * @author Chopper
  * @since 2020/11/22 11:43
  */
-public interface RoleMenuService extends IService<RoleMenu> {
+@Slf4j
+@Service
+public class RoleMenuService extends ServiceImpl<RoleMenuMapper, RoleMenu>  {
 
-    /**
-     * 通过角色获取菜单权限列表
-     *
-     * @param roleId
-     * @return
-     */
-    List<RoleMenu> findByRoleId(String roleId);
+    @Autowired
+    private Cache<Object> cache;
+
+    
+    public List<RoleMenu> findByRoleId(String roleId) {
+        LambdaQueryWrapper<RoleMenu> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(RoleMenu::getRoleId, roleId);
+        return this.baseMapper.selectList(queryWrapper);
+    }
 
 
-    /**
-     * 更新某角色拥有到菜单
-     *
-     * @param roleId
-     * @param roleMenus
-     */
-    void updateRoleMenu(String roleId, List<RoleMenu> roleMenus);
+    
+    @Transactional(rollbackFor = Exception.class)
+    public void updateRoleMenu(String roleId, List<RoleMenu> roleMenus) {
+        try {
+            //删除角色已经绑定的菜单
+            this.deleteRoleMenu(roleId);
+            //重新保存角色菜单关系
+            this.saveBatch(roleMenus);
 
-    /**
-     * 根据角色id 删除数据
-     *
-     * @param roleId
-     */
-    void deleteRoleMenu(String roleId);
+            cache.vagueDel(CachePrefix.USER_MENU.getPrefix(UserEnums.MANAGER));
+            cache.vagueDel(CachePrefix.PERMISSION_LIST.getPrefix(UserEnums.MANAGER));
+        } catch (Exception e) {
+            log.error("修改用户权限错误", e);
+        }
+    }
 
-    /**
-     * 根据角色id 删除数据
-     *
-     * @param roleId
-     */
-    void deleteRoleMenu(List<String> roleId);
+    
+    public void deleteRoleMenu(String roleId) {
+        //删除
+        QueryWrapper<RoleMenu> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("role_id", roleId);
+        cache.vagueDel(CachePrefix.USER_MENU.getPrefix(UserEnums.MANAGER));
+        cache.vagueDel(CachePrefix.PERMISSION_LIST.getPrefix(UserEnums.MANAGER));
+        this.remove(queryWrapper);
+        
+    }
 
+    
+    public void deleteRoleMenu(List<String> roleId) {
+        //删除
+        QueryWrapper<RoleMenu> queryWrapper = new QueryWrapper<>();
+        queryWrapper.in("role_id", roleId);
+        cache.vagueDel(CachePrefix.USER_MENU.getPrefix(UserEnums.MANAGER));
+        cache.vagueDel(CachePrefix.PERMISSION_LIST.getPrefix(UserEnums.MANAGER));
+        this.remove(queryWrapper);
+        
+    }
 }

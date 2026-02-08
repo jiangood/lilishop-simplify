@@ -2,50 +2,94 @@ package cn.lili.modules.sms.service;
 
 import cn.lili.common.vo.PageVO;
 import cn.lili.modules.sms.entity.dos.SmsTemplate;
+import cn.lili.modules.sms.mapper.SmsTemplateMapper;
+import cn.lili.modules.sms.plugin.SmsPluginFactory;
+import cn.lili.modules.sms.service.SmsTemplateService;
+import cn.lili.mybatis.util.PageUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.service.IService;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Map;
 
 /**
- * 签名申请业务层
+ * 短信模板业务层实现
  *
- * @author Bulbasaur
- * @since 2021/1/30 3:19 下午
+ * @author Chopper
+ * @since 2021/1/30 4:27 下午
  */
-public interface SmsTemplateService extends IService<SmsTemplate> {
+@Slf4j
+@Service
+public class SmsTemplateService extends ServiceImpl<SmsTemplateMapper, SmsTemplate>  {
 
-    /**
-     * 添加短信模板
-     *
-     * @param smsTemplate 短信模板
-     */
-    void addSmsTemplate(SmsTemplate smsTemplate);
+    @Autowired
+    private SmsPluginFactory smsPluginFactory;
 
-    /**
-     * 删除短信模板
-     *
-     * @param templateCode 短信模板CODE
-     */
-    void deleteSmsTemplate(String templateCode);
 
-    /**
-     * 查询短信模板的审核状态
-     */
-    void querySmsTemplate();
+    
+    public void addSmsTemplate(SmsTemplate smsTemplate) {
+        try {
+            smsTemplate.setTemplateCode(smsPluginFactory.smsPlugin().addSmsTemplate(smsTemplate));
+            smsTemplate.setTemplateStatus(0);
+            smsTemplate.setTemplateType(1);
+            this.save(smsTemplate);
+        } catch (Exception e) {
+            log.error("添加短信模板错误", e);
+        }
+    }
 
-    /**
-     * 修改未通过审核的短信模板，并重新提交审核。
-     *
-     * @param smsTemplate 短信模板
-     */
-    void modifySmsTemplate(SmsTemplate smsTemplate);
+    
+    public void deleteSmsTemplate(String id) {
+        try {
+            SmsTemplate smsTemplate = this.getById(id);
+            if (smsTemplate.getTemplateCode() != null) {
+                smsPluginFactory.smsPlugin().deleteSmsTemplate(smsTemplate.getTemplateCode());
+            }
+            this.removeById(id);
+        } catch (Exception e) {
+            log.error("删除短信模板错误", e);
+        }
 
-    /**
-     * 分页查询短信模板
-     *
-     * @param pageVO         分页参数
-     * @param templateStatus 状态
-     * @return
-     */
-    IPage<SmsTemplate> page(PageVO pageVO, Integer templateStatus);
+    }
 
+    
+    public void querySmsTemplate() {
+        try {
+            Map<String, Object> map;
+            //获取未审核通过的签名列表
+            List<SmsTemplate> list = list(new LambdaQueryWrapper<SmsTemplate>().eq(SmsTemplate::getTemplateStatus, 0));
+            //查询签名状态
+            for (SmsTemplate smsTemplate : list) {
+                map = smsPluginFactory.smsPlugin().querySmsTemplate(smsTemplate.getTemplateCode());
+                smsTemplate.setTemplateStatus((Integer) map.get("TemplateStatus"));
+                smsTemplate.setReason(map.get("Reason").toString());
+                smsTemplate.setTemplateCode(map.get("TemplateCode").toString());
+                this.updateById(smsTemplate);
+            }
+        } catch (Exception e) {
+            log.error("查询短信模板错误", e);
+        }
+    }
+
+    
+    public void modifySmsTemplate(SmsTemplate smsTemplate) {
+        try {
+            smsPluginFactory.smsPlugin().modifySmsTemplate(smsTemplate);
+            smsTemplate.setTemplateStatus(0);
+            this.updateById(smsTemplate);
+        } catch (Exception e) {
+            log.error("重新提交短信模板错误", e);
+        }
+    }
+
+    
+    public IPage<SmsTemplate> page(PageVO pageVO, Integer templateStatus) {
+        return this.page(PageUtil.initPage(pageVO), new QueryWrapper<SmsTemplate>()
+                .eq(templateStatus != null, "template_status", templateStatus));
+    }
 }

@@ -1,28 +1,38 @@
 package cn.lili.modules.procurement.service;
 
 import cn.lili.modules.procurement.entity.dos.InventoryCountItem;
+import cn.lili.modules.procurement.mapper.InventoryCountItemMapper;
+import cn.lili.modules.procurement.service.InventoryCountItemService;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.baomidou.mybatisplus.extension.service.IService;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 /**
- * 盘点单明细业务接口
- * 提供按盘点单分页查询明细与导出
+ * 盘点单明细业务实现
+ * 提供按盘点单ID分页及列表查询
  * @author Bulbasaur
  * @since 2025-12-18
  */
-public interface InventoryCountItemService extends IService<InventoryCountItem> {
-    /**
-     * 按盘点单分页查询明细
-     * @param countId 盘点单ID
-     * @param page 分页参数
-     * @return 明细分页数据
-     */
-    IPage<InventoryCountItem> pageByCountId(String countId, Page<InventoryCountItem> page);
-    /**
-     * 按盘点单查询全部明细（用于导出）
-     * @param countId 盘点单ID
-     * @return 明细列表
-     */
-    java.util.List<InventoryCountItem> listByCountId(String countId);
+@Service
+public class InventoryCountItemService extends ServiceImpl<InventoryCountItemMapper, InventoryCountItem>  {
+
+    
+    public IPage<InventoryCountItem> pageByCountId(String countId, Page<InventoryCountItem> page) {
+        LambdaQueryWrapper<InventoryCountItem> wrapper = Wrappers.lambdaQuery();
+        wrapper.eq(InventoryCountItem::getCountId, countId);
+        wrapper.orderByDesc(InventoryCountItem::getCreateTime);
+        return this.page(page, wrapper);
+    }
+
+    
+    public List<InventoryCountItem> listByCountId(String countId) {
+        LambdaQueryWrapper<InventoryCountItem> wrapper = Wrappers.lambdaQuery();
+        wrapper.eq(InventoryCountItem::getCountId, countId);
+        return this.list(wrapper);
+    }
 }

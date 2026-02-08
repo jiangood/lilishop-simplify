@@ -1,74 +1,97 @@
 package cn.lili.modules.statistics.service;
 
+import cn.hutool.core.date.DateUtil;
 import cn.lili.modules.member.entity.vo.MemberDistributionVO;
 import cn.lili.modules.statistics.entity.dos.MemberStatisticsData;
 import cn.lili.modules.statistics.entity.dto.StatisticsQueryParam;
-import com.baomidou.mybatisplus.extension.service.IService;
+import cn.lili.modules.statistics.entity.enums.SearchTypeEnum;
+import cn.lili.modules.statistics.mapper.MemberStatisticsMapper;
+import cn.lili.modules.statistics.service.MemberStatisticsService;
+import cn.lili.modules.statistics.util.StatisticsDateUtil;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
 /**
- * 会员统计业务层
+ * 会员统计业务层实现
  *
  * @author Bulbasaur
- * @since 2020/12/9 11:06
+ * @since 2020/12/9 18:33
  */
-public interface MemberStatisticsService extends IService<MemberStatisticsData> {
+@Service
+public class MemberStatisticsService extends ServiceImpl<MemberStatisticsMapper, MemberStatisticsData>  {
 
-    /**
-     * 获取会员数量
-     *
-     * @return 会员统计
-     */
-    long getMemberCount();
+    
+    public long getMemberCount() {
+        QueryWrapper queryWrapper = new QueryWrapper();
+        queryWrapper.eq("disabled", true);
+        return this.baseMapper.customSqlQuery(queryWrapper);
+    }
 
-    /**
-     * 获取今日新增会员数量
-     *
-     * @return 今日新增会员数量
-     */
-    long todayMemberNum();
+    
+    public long todayMemberNum() {
+        QueryWrapper queryWrapper = Wrappers.query();
+        queryWrapper.ge("create_time", DateUtil.beginOfDay(new Date()));
+        return this.baseMapper.customSqlQuery(queryWrapper);
+    }
 
-    /**
-     * 获取指定结束时间前的会员数量
-     *
-     * @param endTime
-     * @return
-     */
-    long memberCount(Date endTime);
+    
+    public long memberCount(Date endTime) {
+        QueryWrapper queryWrapper = Wrappers.query();
+        queryWrapper.le("create_time", endTime);
+        return this.baseMapper.customSqlQuery(queryWrapper);
+    }
 
-    /**
-     * 当天活跃会员数量
-     *
-     * @param startTime
-     * @return
-     */
-    long activeQuantity(Date startTime);
+    
+    public long activeQuantity(Date startTime) {
 
-    /**
-     * 时间段内新增会员数量
-     *
-     * @param endTime
-     * @param startTime
-     * @return
-     */
-    long newlyAdded(Date endTime, Date startTime);
+        QueryWrapper queryWrapper = Wrappers.query();
+        queryWrapper.ge("last_login_date", startTime);
+        return this.baseMapper.customSqlQuery(queryWrapper);
+    }
 
-    /**
-     * 根据参数，查询这段时间的会员统计
-     *
-     * @param statisticsQueryParam
-     * @return
-     */
-    List<MemberStatisticsData> statistics(StatisticsQueryParam statisticsQueryParam);
+    
+    public long newlyAdded(Date startTime, Date endTime) {
+        QueryWrapper queryWrapper = Wrappers.query();
+        queryWrapper.between("create_time", startTime, endTime);
+        return this.baseMapper.customSqlQuery(queryWrapper);
+    }
+
+    
+    public List<MemberStatisticsData> statistics(StatisticsQueryParam statisticsQueryParam) {
+
+        Date[] dates = StatisticsDateUtil.getDateArray(statisticsQueryParam);
+        Date startTime = dates[0];
+        Date endTime = dates[1];
+
+        //如果统计今天，则自行构造数据
+        if (statisticsQueryParam.getSearchType().equals(SearchTypeEnum.TODAY.name())) {
+            //构建数据，然后返回集合，提供给前端展示
+            MemberStatisticsData memberStatisticsData = new MemberStatisticsData();
+            memberStatisticsData.setMemberCount(this.memberCount(endTime));
+            memberStatisticsData.setCreateDate(startTime);
+            memberStatisticsData.setActiveQuantity(this.activeQuantity(startTime));
+            memberStatisticsData.setNewlyAdded(this.newlyAdded(startTime, endTime));
+            List result = new ArrayList<MemberStatisticsData>();
+            result.add(memberStatisticsData);
+            return result;
+        }
+
+        QueryWrapper queryWrapper = Wrappers.query();
+        queryWrapper.between("create_date", startTime, endTime);
+
+        return list(queryWrapper);
+    }
 
 
-    /**
-     * 查看会员数据分布
-     *
-     * @return 会员数据分布
-     */
-    List<MemberDistributionVO> distribution();
+    
+    public List<MemberDistributionVO> distribution() {
+        return this.baseMapper.distribution();
+    }
 
 }

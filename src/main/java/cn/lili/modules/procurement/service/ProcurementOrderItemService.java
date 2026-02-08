@@ -1,22 +1,31 @@
 package cn.lili.modules.procurement.service;
 
 import cn.lili.modules.procurement.entity.dos.ProcurementOrderItem;
-import com.baomidou.mybatisplus.extension.service.IService;
+import cn.lili.modules.procurement.mapper.ProcurementOrderItemMapper;
+import cn.lili.modules.procurement.service.ProcurementOrderItemService;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 /**
- * 采购单明细业务接口
- * 定义采购明细批量保存等能力
+ * 采购单明细业务实现
+ * 提供采购明细的批量保存与初始化
  * @author Bulbasaur
  * @since 2025-12-18
  */
-public interface ProcurementOrderItemService extends IService<ProcurementOrderItem> {
-    /**
-     * 批量保存采购单明细
-     * @param orderId 采购单ID
-     * @param items 采购明细列表
-     * @return 是否保存成功
-     */
-    boolean saveItems(String orderId, List<ProcurementOrderItem> items);
+@Service
+public class ProcurementOrderItemService extends ServiceImpl<ProcurementOrderItemMapper, ProcurementOrderItem>  {
+    
+    @Transactional(rollbackFor = Exception.class)
+    public boolean saveItems(String orderId, List<ProcurementOrderItem> items) {
+        for (ProcurementOrderItem item : items) {
+            item.setProcurementOrderId(orderId);
+            if (item.getReceivedQuantity() == null) {
+                item.setReceivedQuantity(0);
+            }
+        }
+        return this.saveBatch(items);
+    }
 }

@@ -1,41 +1,60 @@
 package cn.lili.modules.permission.service;
 
+import cn.lili.cache.Cache;
+import cn.lili.cache.CachePrefix;
+import cn.lili.common.security.enums.UserEnums;
 import cn.lili.modules.permission.entity.dos.UserRole;
-import com.baomidou.mybatisplus.extension.service.IService;
+import cn.lili.modules.permission.mapper.UserRoleMapper;
+import cn.lili.modules.permission.service.UserRoleService;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 管理员业务层
+ * 用户权限业务层实现
  *
  * @author Chopper
- * @since 2020/11/17 3:46 下午
+ * @since 2020/11/17 3:52 下午
  */
-public interface UserRoleService extends IService<UserRole> {
+@Service
+public class UserRoleService extends ServiceImpl<UserRoleMapper, UserRole>  {
 
-    /**
-     * 根据用户查看拥有的角色
-     *
-     * @param userId
-     * @return
-     */
-    List<UserRole> listByUserId(String userId);
+    @Autowired
+    private Cache cache;
 
-    /**
-     * 根据用户查看拥有的角色
-     *
-     * @param userId
-     * @return
-     */
-    List<String> listId(String userId);
+    
+    public List<UserRole> listByUserId(String userId) {
+        QueryWrapper<UserRole> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("user_id", userId);
+        return this.baseMapper.selectList(queryWrapper);
+    }
 
-    /**
-     * 更新用户拥有的角色
-     *
-     * @param userId    角色
-     * @param userRoles 角色权限
-     */
-    void updateUserRole(String userId, List<UserRole> userRoles);
+    
+    public List<String> listId(String userId) {
+        List<UserRole> userRoleList = this.listByUserId(userId);
+        List<String> strings = new ArrayList<>();
+        userRoleList.forEach(item -> strings.add(item.getRoleId()));
+        return strings;
+    }
 
+    
+    @Transactional(rollbackFor = Exception.class)
+    public void updateUserRole(String userId, List<UserRole> userRoles) {
+
+        //删除
+        QueryWrapper<UserRole> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("user_id", userId);
+        this.remove(queryWrapper);
+
+        //保存
+        this.saveBatch(userRoles);
+        cache.vagueDel(CachePrefix.USER_MENU.getPrefix(UserEnums.MANAGER));
+        cache.vagueDel(CachePrefix.PERMISSION_LIST.getPrefix(UserEnums.MANAGER));
+    }
 
 }

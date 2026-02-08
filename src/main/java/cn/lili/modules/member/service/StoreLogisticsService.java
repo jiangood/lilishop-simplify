@@ -1,92 +1,98 @@
 package cn.lili.modules.member.service;
 
+import cn.lili.common.security.context.UserContext;
+import cn.lili.modules.member.mapper.StoreLogisticsMapper;
+import cn.lili.modules.member.service.StoreLogisticsService;
 import cn.lili.modules.store.entity.dos.StoreLogistics;
 import cn.lili.modules.store.entity.dto.StoreLogisticsCustomerDTO;
 import cn.lili.modules.system.entity.vo.StoreLogisticsVO;
-import com.baomidou.mybatisplus.extension.service.IService;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
- * 店铺-物流公司业务层
+ * 物流公司业务层实现
  *
  * @author Chopper
  * @since 2020/11/17 8:02 下午
  */
-public interface StoreLogisticsService extends IService<StoreLogistics> {
+@Service
+public class StoreLogisticsService extends ServiceImpl<StoreLogisticsMapper, StoreLogistics>  {
 
-    /**
-     * 获取当前店铺的物流公司列表
-     *
-     * @param storeId 店铺id
-     * @return 物流公司列表
-     */
-    List<StoreLogisticsVO> getStoreLogistics(String storeId);
+    
+    public List<StoreLogisticsVO> getStoreLogistics(String storeId) {
+        return this.baseMapper.getStoreLogistics(storeId);
+    }
 
-    /**
-     * 获取当前店铺已选择的物流公司列表
-     *
-     * @param storeId 店铺id
-     * @return 物流公司列表
-     */
-    List<StoreLogisticsVO> getStoreSelectedLogistics(String storeId);
+    
+    public List<StoreLogisticsVO> getStoreSelectedLogistics(String storeId) {
+        return this.baseMapper.getSelectedStoreLogistics(storeId);
 
-    /**
-     * 获取当前店铺已选择的物流公司名称列表
-     *
-     * @param storeId 店铺id
-     * @return 物流公司列表
-     */
-    List<String> getStoreSelectedLogisticsName(String storeId);
+    }
 
-    /**
-     * 添加店铺-物流公司
-     *
-     * @param logisticsId 物流公司设置id
-     * @param storeId 店铺id
-     * @return 店铺物流公司
-     */
-    StoreLogistics add(String logisticsId, String storeId, StoreLogisticsCustomerDTO storeLogisticsCustomerDTO);
+    
+    public List<String> getStoreSelectedLogisticsName(String storeId) {
+        return this.baseMapper.getSelectedStoreLogisticsName(storeId);
+    }
 
-    /**
-     * 获取当前店铺已选择的物流公司并使用电子面单列表
-     *
-     * @param storeId 店铺id
-     * @return 物流公司列表
-     */
-    List<StoreLogisticsVO> getStoreSelectedLogisticsUseFaceSheet(String storeId);
+    
+    public List<StoreLogisticsVO> getStoreSelectedLogisticsUseFaceSheet(String storeId) {
+        return this.baseMapper.getSelectedStoreLogisticsUseFaceSheet(storeId);
+    }
 
+    
+    public StoreLogistics update(String logisticsId, String storeId, StoreLogisticsCustomerDTO storeLogisticsCustomerDTO) {
+        LambdaQueryWrapper<StoreLogistics> lambdaQueryWrapper = Wrappers.lambdaQuery();
+        lambdaQueryWrapper.eq(StoreLogistics::getLogisticsId, logisticsId);
+        lambdaQueryWrapper.eq(StoreLogistics::getStoreId, storeId);
+        this.remove(lambdaQueryWrapper);
+        StoreLogistics ResultstoreLogistics = new StoreLogistics(storeLogisticsCustomerDTO);
+        ResultstoreLogistics.setStoreId(storeId);
+        ResultstoreLogistics.setLogisticsId(logisticsId);
+        this.save(ResultstoreLogistics);
+        return ResultstoreLogistics;
+    }
 
-    /**
-     * 修改店铺-物流公司电子面单参数
-     * @param logisticsId 物流公司设置id
-     * @param storeId 店铺id
-     * @return 店铺物流公司
-     */
-    StoreLogistics update(String logisticsId, String storeId, StoreLogisticsCustomerDTO storeLogisticsCustomerDTO);
+    
+    public StoreLogistics getStoreLogisticsInfo(String logisticsId) {
+        String storeId = Objects.requireNonNull(UserContext.getCurrentUser()).getStoreId();
+        return this.getOne(new LambdaQueryWrapper<StoreLogistics>().eq(StoreLogistics::getStoreId, storeId).eq(StoreLogistics::getLogisticsId, logisticsId));
+    }
 
+    
+    public List<StoreLogisticsVO> getOpenStoreLogistics(String storeId) {
+        List<StoreLogisticsVO> openStoreLogistics = this.baseMapper.getOpenStoreLogistics(storeId);
+        for (StoreLogisticsVO storeLogisticsVO : openStoreLogistics) {
+            storeLogisticsVO.setSelected("1");
+        }
+        return openStoreLogistics;
+    }
 
-    /**
-     * 获取店铺物流信息回填
-     * @param logisticsId 物流id
-     * @return 店铺物流信息
-     */
-    StoreLogistics getStoreLogisticsInfo(String logisticsId);
+    
+    public List<StoreLogisticsVO> getCloseStoreLogistics(String storeId) {
+        return this.baseMapper.getCloseStroreLogistics(storeId);
+    }
 
-    /**
-     * 获取当前店铺已开启的物流公司列表
-     *
-     * @param storeId 店铺id
-     * @return 物流公司列表
-     */
-    List<StoreLogisticsVO> getOpenStoreLogistics(String storeId);
+    
+    public StoreLogistics add(String logisticsId, String storeId, StoreLogisticsCustomerDTO storeLogisticsCustomerDTO) {
+        //判断是否已经选择过，如果没有选择则进行添加
+        LambdaQueryWrapper<StoreLogistics> lambdaQueryWrapper = Wrappers.lambdaQuery();
+        lambdaQueryWrapper.eq(StoreLogistics::getLogisticsId, logisticsId);
+        lambdaQueryWrapper.eq(StoreLogistics::getStoreId, storeId);
+        StoreLogistics storeLogistics = null;
+        if (this.getOne(lambdaQueryWrapper) == null) {
+            storeLogistics = new StoreLogistics(storeLogisticsCustomerDTO);
+            storeLogistics.setStoreId(storeId);
+            storeLogistics.setLogisticsId(logisticsId);
+            this.save(storeLogistics);
+            return storeLogistics;
+        }
+        return null;
+    }
 
-    /**
-     * 获取当前店铺未开启的物流公司列表
-     *
-     * @param storeId 店铺id
-     * @return 物流公司列表
-     */
-    List<StoreLogisticsVO> getCloseStoreLogistics(String storeId);
 
 }

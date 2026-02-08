@@ -1,33 +1,84 @@
 package cn.lili.modules.goods.service;
 
+import cn.hutool.core.collection.CollUtil;
+import cn.lili.cache.Cache;
+import cn.lili.common.enums.ResultCode;
+import cn.lili.common.exception.ServiceException;
 import cn.lili.modules.goods.entity.dos.Wholesale;
-import com.baomidou.mybatisplus.extension.service.IService;
+import cn.lili.modules.goods.mapper.WholesaleMapper;
+import cn.lili.modules.goods.service.WholesaleService;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheConfig;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.stereotype.Service;
 
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * @author paulG
  * @since 2022/5/24
  **/
-public interface WholesaleService extends IService<Wholesale> {
+@Service
+@CacheConfig(cacheNames = "{wholesale}_")
+public class WholesaleService extends ServiceImpl<WholesaleMapper, Wholesale>  {
 
+    @Autowired
+    private Cache<List<Wholesale>> cache;
 
-    List<Wholesale> findByGoodsId(String goodsId);
+    
+    @Cacheable(key = "#goodsId")
+    public List<Wholesale> findByGoodsId(String goodsId) {
+        LambdaQueryWrapper<Wholesale> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(Wholesale::getGoodsId, goodsId);
+        return this.list(queryWrapper).stream().sorted(Comparator.comparing(Wholesale::getNum)).collect(Collectors.toList());
+    }
 
-    List<Wholesale> findByTemplateId(String templateId);
+    
+    @Cacheable(key = "#templateId+'_template'")
+    public List<Wholesale> findByTemplateId(String templateId) {
+        LambdaQueryWrapper<Wholesale> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(Wholesale::getTemplateId, templateId);
+        return this.list(queryWrapper).stream().sorted(Comparator.comparing(Wholesale::getNum)).collect(Collectors.toList());
+    }
 
-    Boolean removeByGoodsId(String goodsId);
+    
+    @CacheEvict(key = "#templateId+'_template'")
+    public Boolean removeByTemplateId(String templateId) {
+        LambdaQueryWrapper<Wholesale> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(Wholesale::getTemplateId, templateId);
+        cache.remove("{wholesale}_" + templateId + "_template");
+        return this.remove(queryWrapper);
+    }
 
+    
+    @CacheEvict(key = "#goodsId")
+    public Boolean removeByGoodsId(String goodsId) {
+        LambdaQueryWrapper<Wholesale> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(Wholesale::getGoodsId, goodsId);
+        cache.remove("{wholesale}_" + goodsId);
+        return this.remove(queryWrapper);
+    }
 
-    Boolean removeByTemplateId(String templateId);
-
-    /**
-     * 匹配批发规则
-     *
-     * @param goodsId 商品规则
-     * @param num 数量
-     * @return 批发规则
-     */
-    Wholesale match(String goodsId, Integer num);
-
+    
+    public Wholesale match(String goodsId, Integer num) {
+        List<Wholesale> wholesaleList = cache.get("{wholesale}_" + goodsId);
+        if (wholesaleList == null) {
+            wholesaleList = this.findByGoodsId(goodsId);
+            cache.put("{wholesale}_" + goodsId, wholesaleList);
+        }
+        List<Wholesale> matchList = wholesaleList.stream()
+                .filter(wholesale -> wholesale.getNum() <= num)
+                .collect(Collectors.toList());
+        if (CollUtil.isNotEmpty(matchList)) {
+            return matchList.get(matchList.size() - 1);
+        } else if (CollUtil.isNotEmpty(wholesaleList) && CollUtil.isEmpty(matchList)) {
+            throw new ServiceException(ResultCode.DO_NOT_MATCH_WHOLESALE);
+        }
+        return null;
+    }
 }

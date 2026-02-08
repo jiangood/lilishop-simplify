@@ -1,37 +1,110 @@
 package cn.lili.modules.wallet.service;
 
 
+import cn.lili.common.enums.ResultCode;
+import cn.lili.common.exception.ServiceException;
+import cn.lili.common.message.Topic;
+import cn.lili.framework.queue.MessageQueueTemplate;
+import cn.lili.common.utils.StringUtils;
 import cn.lili.common.vo.PageVO;
 import cn.lili.modules.wallet.entity.dos.MemberWithdrawApply;
+import cn.lili.modules.wallet.entity.dto.MemberWithdrawalMessage;
+import cn.lili.modules.wallet.entity.enums.WithdrawStatusEnum;
+import cn.lili.modules.wallet.entity.vo.MemberWalletVO;
 import cn.lili.modules.wallet.entity.vo.MemberWithdrawApplyQueryVO;
+import cn.lili.modules.wallet.mapper.MemberWithdrawApplyMapper;
+import cn.lili.modules.wallet.service.MemberWalletService;
+import cn.lili.modules.wallet.service.MemberWithdrawApplyService;
+import cn.lili.mybatis.util.PageUtil;
+import cn.lili.rocketmq.tags.MemberTagsEnum;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.service.IService;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Date;
+
 
 /**
- * 会员提现申请业务层
+ * 会员提现申请业务层实现
  *
  * @author pikachu
  * @since 2020-02-25 14:10:16
  */
-public interface MemberWithdrawApplyService extends IService<MemberWithdrawApply> {
+@Service
+public class MemberWithdrawApplyService extends ServiceImpl<MemberWithdrawApplyMapper, MemberWithdrawApply>  {
+
+    @Autowired
+    private MessageQueueTemplate messageQueueTemplate;
 
     /**
-     * 平台审核提现申请，申请成功后直接扣款
-     *
-     * @param applyId 审核id
-     * @param result  审核结构
-     * @param remark  备注
-     * @return 操作状态
+     * 会员余额
      */
-    Boolean audit(String applyId, Boolean result, String remark);
+    @Autowired
+    @Lazy
+    private MemberWalletService memberWalletService;
 
-    /**
-     * 提现记录列表
-     *
-     * @param pageVO                     分页条件
-     * @param memberWithdrawApplyQueryVO 提现记录查询条件
-     * @return 提现记录分页
-     */
-    IPage<MemberWithdrawApply> getMemberWithdrawPage(PageVO pageVO, MemberWithdrawApplyQueryVO memberWithdrawApplyQueryVO);
+    
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean audit(String applyId, Boolean result, String remark) {
+        MemberWithdrawalMessage memberWithdrawalMessage = new MemberWithdrawalMessage();
+        //查询申请记录
+        MemberWithdrawApply memberWithdrawApply = this.getById(applyId);
+        memberWithdrawApply.setInspectRemark(remark);
+        memberWithdrawApply.setInspectTime(new Date());
+        if (memberWithdrawApply != null) {
+            //获取账户余额
+            MemberWalletVO memberWalletVO = memberWalletService.getMemberWallet(memberWithdrawApply.getMemberId());
+            //校验金额是否满足提现，因为是从冻结金额扣减，所以校验的是冻结金额
+            if (memberWalletVO.getMemberFrozenWallet() < memberWithdrawApply.getApplyMoney()) {
+                throw new ServiceException(ResultCode.WALLET_WITHDRAWAL_FROZEN_AMOUNT_INSUFFICIENT);
+            }
+            //如果审核通过 则微信直接提现，反之则记录审核状态
+            if (Boolean.TRUE.equals(result)) {
+                memberWithdrawApply.setApplyStatus(WithdrawStatusEnum.VIA_AUDITING.name());
 
+            } else {
+                memberWithdrawApply.setApplyStatus(WithdrawStatusEnum.FAIL_AUDITING.name());
+                //保存修改审核记录
+                this.updateById(memberWithdrawApply);
+
+            }
+            //发送审核消息
+            memberWithdrawalMessage.setStatus(memberWithdrawApply.getApplyStatus());
+            memberWithdrawalMessage.setMemberWithdrawApplyId(memberWithdrawApply.getId());
+            memberWithdrawalMessage.setMemberId(memberWithdrawApply.getMemberId());
+            memberWithdrawalMessage.setPrice(memberWithdrawApply.getApplyMoney());
+
+            messageQueueTemplate.send(Topic.MEMBER, MemberTagsEnum.MEMBER_WITHDRAWAL.name(),memberWithdrawalMessage);
+            return true;
+        }
+        throw new ServiceException(ResultCode.WALLET_APPLY_ERROR);
+    }
+
+
+    
+    public IPage<MemberWithdrawApply> getMemberWithdrawPage(PageVO pageVO, MemberWithdrawApplyQueryVO memberWithdrawApplyQueryVO) {
+        //构建查询条件
+        QueryWrapper<MemberWithdrawApply> queryWrapper = new QueryWrapper<>();
+        //会员名称
+        queryWrapper.like(!StringUtils.isEmpty(memberWithdrawApplyQueryVO.getMemberName()), "member_name", memberWithdrawApplyQueryVO.getMemberName());
+        //充值订单号
+        queryWrapper.eq(!StringUtils.isEmpty(memberWithdrawApplyQueryVO.getSn()), "sn", memberWithdrawApplyQueryVO.getSn());
+        //会员id
+        queryWrapper.eq(!StringUtils.isEmpty(memberWithdrawApplyQueryVO.getMemberId()), "member_id", memberWithdrawApplyQueryVO.getMemberId());
+        //已付款的充值订单
+        queryWrapper.eq(!StringUtils.isEmpty(memberWithdrawApplyQueryVO.getApplyStatus()), "apply_status", memberWithdrawApplyQueryVO.getApplyStatus());
+        //开始时间和结束时间
+        if (!StringUtils.isEmpty(memberWithdrawApplyQueryVO.getStartDate()) && !StringUtils.isEmpty(memberWithdrawApplyQueryVO.getEndDate())) {
+            Date start = cn.hutool.core.date.DateUtil.parse(memberWithdrawApplyQueryVO.getStartDate());
+            Date end = cn.hutool.core.date.DateUtil.parse(memberWithdrawApplyQueryVO.getEndDate());
+            queryWrapper.between("create_time", start, end);
+        }
+        queryWrapper.orderByDesc("create_time");
+        //查询返回数据
+        return this.baseMapper.selectPage(PageUtil.initPage(pageVO), queryWrapper);
+    }
 }

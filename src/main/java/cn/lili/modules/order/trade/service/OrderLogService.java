@@ -1,22 +1,28 @@
 package cn.lili.modules.order.trade.service;
 
 import cn.lili.modules.order.trade.entity.dos.OrderLog;
-import com.baomidou.mybatisplus.extension.service.IService;
+import cn.lili.modules.order.trade.mapper.OrderLogMapper;
+import cn.lili.modules.order.trade.service.OrderLogService;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 /**
- * 订单日志业务层
+ * 订单日志业务层实现
  *
  * @author Chopper
  * @since 2020-02-25 14:10:16
  */
-public interface OrderLogService extends IService<OrderLog> {
+@Service
+public class OrderLogService extends ServiceImpl<OrderLogMapper, OrderLog>  {
 
-    /**
-     * 根据订单编号获取订单日志列表
-     * @param orderSn 订单编号
-     * @return 订单日志列表
-     */
-    List<OrderLog> getOrderLog(String orderSn);
+    
+    public List<OrderLog> getOrderLog(String orderSn) {
+        LambdaQueryWrapper<OrderLog> lambdaQueryWrapper = Wrappers.lambdaQuery();
+        lambdaQueryWrapper.eq(OrderLog::getOrderSn, orderSn);
+        return this.list(lambdaQueryWrapper);
+    }
 }

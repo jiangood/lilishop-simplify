@@ -1,80 +1,247 @@
 package cn.lili.modules.goods.service;
 
+import cn.hutool.core.convert.Convert;
+import cn.hutool.core.text.CharSequenceUtil;
+import cn.lili.common.enums.ResultCode;
+import cn.lili.common.exception.ServiceException;
+import cn.lili.common.security.context.UserContext;
+import cn.lili.common.security.enums.UserEnums;
+import cn.lili.common.utils.BeanUtil;
 import cn.lili.common.vo.PageVO;
+import cn.lili.modules.goods.entity.dos.Goods;
 import cn.lili.modules.goods.entity.dos.Studio;
+import cn.lili.modules.goods.entity.dos.StudioCommodity;
+import cn.lili.modules.goods.entity.enums.StudioStatusEnum;
 import cn.lili.modules.goods.entity.vos.StudioVO;
+import cn.lili.modules.goods.mapper.StudioMapper;
+import cn.lili.modules.goods.service.CommodityService;
+import cn.lili.modules.goods.service.GoodsService;
+import cn.lili.modules.goods.service.StudioCommodityService;
+import cn.lili.modules.goods.service.StudioService;
+import cn.lili.modules.goods.util.WechatLivePlayerUtil;
+import cn.lili.mybatis.util.PageUtil;
+import cn.lili.framework.delay.DelayTask;
+import cn.lili.framework.delay.DelayedTaskTemplate;
 import cn.lili.trigger.message.BroadcastMessage;
+import com.alibaba.fastjson2.JSON;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.service.IService;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.jetbrains.annotations.NotNull;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.*;
+
+import static cn.lili.trigger.model.TimeExecuteConstant.BROADCAST_EXECUTOR;
 
 /**
- * 直播间业务层
+ * 小程序直播间业务层实现
  *
  * @author Bulbasaur
- * @since 2021/5/17 10:02 上午
+ * @since 2021/5/17 10:04 上午
  */
-public interface StudioService extends IService<Studio> {
+@Service
+public class StudioService extends ServiceImpl<StudioMapper, Studio>  {
+
+    @Autowired
+    private WechatLivePlayerUtil wechatLivePlayerUtil;
+    @Autowired
+    private StudioCommodityService studioCommodityService;
+    @Autowired
+    private CommodityService commodityService;
+    @Autowired
+    private DelayedTaskTemplate timeTrigger;
+    @Autowired
+    private GoodsService goodsService;
+
+    
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean create(Studio studio) {
+        studio.setStoreId(Objects.requireNonNull(UserContext.getCurrentUser()).getStoreId());
+        //创建小程序直播
+        Map<String, String> roomMap = wechatLivePlayerUtil.create(studio);
+        studio.setRoomId(Convert.toInt(roomMap.get("roomId")));
+        studio.setQrCodeUrl(roomMap.get("qrcodeUrl"));
+        studio.setStatus(StudioStatusEnum.NEW.name());
+        //直播间添加成功发送直播间开启、关闭延时任务
+        if (this.save(studio)) {
+            triggerDelayJob(studio, false);
+        }
+        return true;
+
+    }
+
+    private void triggerDelayJob(Studio studio, boolean isEdit) {
+        //直播开启延时任务
+        {
+            BroadcastMessage broadcastMessage = new BroadcastMessage(studio.getId(), StudioStatusEnum.START.name());
+            String jobKey = getJobKey(studio, StudioStatusEnum.START);
+            DelayTask request = new DelayTask(BROADCAST_EXECUTOR,
+                    new Date(Long.parseLong(studio.getStartTime()) * 1000L),
+                    broadcastMessage,
+                    jobKey
+                    );
+
+            if (isEdit) {
+                this.timeTrigger.delete(jobKey);
+            }
+
+            //发送促销活动开始的延时任务
+            this.timeTrigger.add(request);
+        }
+
+        {
+            //直播结束延时任务
+            BroadcastMessage broadcastMessage = new BroadcastMessage(studio.getId(), StudioStatusEnum.END.name());
+            String jobKey = getJobKey(studio, StudioStatusEnum.END);
+            DelayTask request = new DelayTask(BROADCAST_EXECUTOR,
+                    new Date(Long.parseLong(studio.getEndTime()) * 1000L), broadcastMessage, jobKey);
+
+            if (isEdit) {
+                this.timeTrigger.delete(jobKey);
+            }
+            //发送促销活动开始的延时任务
+            this.timeTrigger.add(request);
+        }
+    }
+
+    
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean edit(Studio studio) {
+        wechatLivePlayerUtil.editRoom(studio);
+        if (this.updateById(studio)) {
+            this.triggerDelayJob(studio, true);
+        }
+        return true;
+    }
+
+    @NotNull
+    private static String getJobKey(Studio studio, StudioStatusEnum status) {
+        return "BROADCAST_" + studio.getId() + "_" + status;
+    }
+
+    
+    public StudioVO getStudioVO(String id) {
+        StudioVO studioVO = new StudioVO();
+        Studio studio = this.getById(id);
+        //获取直播间信息
+        BeanUtil.copyProperties(studio, studioVO);
+        //获取直播间商品信息
+        studioVO.setCommodityList(commodityService.getCommodityByRoomId(studioVO.getRoomId()));
+        return studioVO;
+    }
+
+    
+    public String getLiveInfo(Integer roomId) {
+        Studio studio = this.getByRoomId(roomId);
+        //获取直播间并判断回放内容是否为空，如果为空则获取直播间回放并保存
+        if (studio.getMediaUrl() != null) {
+            return studio.getMediaUrl();
+        } else {
+            String mediaUrl = wechatLivePlayerUtil.getLiveInfo(roomId);
+            studio.setMediaUrl(mediaUrl);
+            this.save(studio);
+            return mediaUrl;
+        }
+    }
+
+    
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean push(Integer roomId, Integer liveGoodsId, String storeId, String goodsId) {
+
+        //判断直播间是否已添加商品
+        if (studioCommodityService.getOne(
+                new LambdaQueryWrapper<StudioCommodity>().eq(StudioCommodity::getRoomId, roomId)
+                        .eq(StudioCommodity::getGoodsId, liveGoodsId)) != null) {
+            throw new ServiceException(ResultCode.STODIO_GOODS_EXIST_ERROR);
+        }
+
+        Goods goods = goodsService.getOne(new LambdaQueryWrapper<Goods>().eq(Goods::getId, goodsId).eq(Goods::getStoreId, storeId));
+        if (goods == null) {
+            throw new ServiceException(ResultCode.USER_AUTHORITY_ERROR);
+        }
+
+        //调用微信接口添加直播间商品并进行记录
+        if (Boolean.TRUE.equals(wechatLivePlayerUtil.pushGoods(roomId, liveGoodsId))) {
+            studioCommodityService.save(new StudioCommodity(roomId, liveGoodsId));
+            //添加直播间商品数量
+            Studio studio = this.getByRoomId(roomId);
+            studio.setRoomGoodsNum(studio.getRoomGoodsNum() != null ? studio.getRoomGoodsNum() + 1 : 1);
+            //设置直播间默认的商品（前台展示）只展示两个
+            if (studio.getRoomGoodsNum() < 3) {
+                studio.setRoomGoodsList(JSON.toJSONString(commodityService.getSimpleCommodityByRoomId(roomId)));
+            }
+            return this.updateById(studio);
+        }
+        return false;
+    }
+
+    
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean goodsDeleteInRoom(Integer roomId, Integer goodsId, String storeId) {
+        Goods goods = goodsService.getOne(new LambdaQueryWrapper<Goods>().eq(Goods::getId, goodsId).eq(Goods::getStoreId, storeId));
+        if (goods == null) {
+            throw new ServiceException(ResultCode.USER_AUTHORITY_ERROR);
+        }
+        //调用微信接口删除直播间商品并进行记录
+        if (Boolean.TRUE.equals(wechatLivePlayerUtil.goodsDeleteInRoom(roomId, goodsId))) {
+            studioCommodityService.remove(new QueryWrapper<StudioCommodity>().eq("room_id", roomId).eq("goods_id", goodsId));
+            //减少直播间商品数量
+            Studio studio = this.getByRoomId(roomId);
+            studio.setRoomGoodsNum(studio.getRoomGoodsNum() - 1);
+            //设置直播间默认的商品（前台展示）只展示两个
+            if (studio.getRoomGoodsNum() < 3) {
+                studio.setRoomGoodsList(JSON.toJSONString(commodityService.getSimpleCommodityByRoomId(roomId)));
+            }
+            return this.updateById(studio);
+        }
+        return false;
+    }
+
+    
+    public IPage<StudioVO> studioList(PageVO pageVO, Integer recommend, String status) {
+        QueryWrapper queryWrapper = new QueryWrapper<Studio>()
+                .eq(recommend != null, "recommend", true)
+                .eq(CharSequenceUtil.isNotEmpty(status), "status", status)
+                .orderByDesc("create_time");
+        if (UserContext.getCurrentUser() != null && UserContext.getCurrentUser().getRole().equals(UserEnums.STORE)) {
+            queryWrapper.eq("store_id", UserContext.getCurrentUser().getStoreId());
+        }
+        Page page = this.page(PageUtil.initPage(pageVO), queryWrapper);
+        List<Studio> records = page.getRecords();
+        List<StudioVO> studioVOS = new ArrayList<>();
+        for (Studio record : records) {
+            StudioVO studioVO = new StudioVO();
+            //获取直播间信息
+            BeanUtil.copyProperties(record, studioVO);
+            //获取直播间商品信息
+            studioVO.setCommodityList(commodityService.getCommodityByRoomId(studioVO.getRoomId()));
+            studioVOS.add(studioVO);
+        }
+        page.setRecords(studioVOS);
+        return page;
+
+    }
+
+    
+    public void updateStudioStatus(BroadcastMessage broadcastMessage) {
+        this.update(new LambdaUpdateWrapper<Studio>()
+                .eq(Studio::getId, broadcastMessage.getStudioId())
+                .set(Studio::getStatus, broadcastMessage.getStatus()));
+    }
 
     /**
-     * 创建直播间
-     * 直播间默认手机直播
-     * 默认开启：点赞、商品货架、评论、回放
-     * @param studio 直播间
-     * @return 开启状态
+     * 根据直播间ID获取直播间
+     *
+     * @param roomId 直播间ID
+     * @return 直播间
      */
-    Boolean create(Studio studio);
-
-    /**
-     * 修改直播间
-     * 直播间默认手机直播
-     * @param studio 直播间
-     * @return 修改状态
-     */
-    Boolean edit(Studio studio);
-
-    /**
-     * 获取直播间信息
-     * @param id 直播间ID
-     * @return 直播间VO
-     */
-    StudioVO getStudioVO(String id);
-
-    /**
-     * 获取直播间回放
-     * @param roomId 房间ID
-     * @return 直播间回放地址
-     */
-    String getLiveInfo(Integer roomId);
-
-    /**
-     * 推送商品
-     * @param roomId 房间ID
-     * @param goodsId 商品ID
-     * @param storeId 店铺ID
-     * @return 操作结果
-     */
-    Boolean push(Integer roomId,Integer liveGoodsId, String storeId, String goodsId);
-
-    /**
-     * 删除商品
-     * @param roomId 店铺ID
-     * @param goodsId 商品ID
-     * @return 操作结果
-     */
-    Boolean goodsDeleteInRoom(Integer roomId,Integer goodsId, String storeId);
-
-    /**
-     * 获取直播间列表
-     * @param pageVO 分页
-     * @param recommend 是否推荐
-     * @param status 直播间状态
-     * @return 直播间分页
-     */
-    IPage<StudioVO> studioList(PageVO pageVO, Integer recommend, String status);
-
-    /**
-     * 修改直播间状态
-     * @param broadcastMessage 直播间消息
-     */
-    void updateStudioStatus(BroadcastMessage broadcastMessage);
+    private Studio getByRoomId(Integer roomId) {
+        return this.getOne(new LambdaQueryWrapper<Studio>().eq(Studio::getRoomId, roomId));
+    }
 }

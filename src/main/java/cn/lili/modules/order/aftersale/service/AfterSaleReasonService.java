@@ -1,31 +1,40 @@
 package cn.lili.modules.order.aftersale.service;
 
 import cn.lili.modules.order.aftersale.entity.dos.AfterSaleReason;
-import com.baomidou.mybatisplus.extension.service.IService;
+import cn.lili.modules.order.aftersale.mapper.AfterSaleReasonMapper;
+import cn.lili.modules.order.aftersale.service.AfterSaleReasonService;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 /**
- * 售后原因业务层
+ * 售后原因业务层实现
  *
  * @author Chopper
- * @since 2020/11/17 7:37 下午
+ * @since 2020/11/17 7:38 下午
  */
-public interface AfterSaleReasonService extends IService<AfterSaleReason> {
-
-    /**
-     * 获取售后原因列表
-     * @param serviceType
-     * @return
-     */
-    List<AfterSaleReason> afterSaleReasonList(String serviceType);
+@Service
+public class AfterSaleReasonService extends ServiceImpl<AfterSaleReasonMapper, AfterSaleReason>  {
 
 
-    /**
-     * 修改售后原因
-     * @param afterSaleReason 售后原因
-     * @return 售后原因
-     */
-    AfterSaleReason editAfterSaleReason(AfterSaleReason afterSaleReason);
+    
+    public List<AfterSaleReason> afterSaleReasonList(String serviceType) {
+        LambdaQueryWrapper<AfterSaleReason> lambdaQueryWrapper = Wrappers.lambdaQuery();
+        lambdaQueryWrapper.eq(AfterSaleReason::getServiceType, serviceType);
+        return this.list(lambdaQueryWrapper);
+    }
 
+    
+    public AfterSaleReason editAfterSaleReason(AfterSaleReason afterSaleReason) {
+        LambdaUpdateWrapper<AfterSaleReason> lambdaQueryWrapper = Wrappers.lambdaUpdate();
+        lambdaQueryWrapper.eq(AfterSaleReason::getId, afterSaleReason.getId());
+        lambdaQueryWrapper.set(AfterSaleReason::getReason, afterSaleReason.getReason());
+        lambdaQueryWrapper.set(AfterSaleReason::getServiceType, afterSaleReason.getServiceType());
+        this.update(lambdaQueryWrapper);
+        return afterSaleReason;
+    }
 }

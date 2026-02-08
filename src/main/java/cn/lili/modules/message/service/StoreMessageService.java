@@ -1,55 +1,79 @@
 package cn.lili.modules.message.service;
 
+
+import cn.hutool.core.text.CharSequenceUtil;
+import cn.lili.common.enums.ResultCode;
+import cn.lili.common.exception.ServiceException;
+import cn.lili.common.security.context.UserContext;
 import cn.lili.common.vo.PageVO;
 import cn.lili.modules.message.entity.dos.StoreMessage;
 import cn.lili.modules.message.entity.vos.StoreMessageQueryVO;
+import cn.lili.modules.message.mapper.StoreMessageMapper;
+import cn.lili.modules.message.service.StoreMessageService;
+import cn.lili.mybatis.util.PageUtil;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.service.IService;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 /**
- * 店铺接收消息业务层
+ * 消息发送业务层实现
  *
  * @author Chopper
- * @since 2020/11/17 3:44 下午
+ * @since 2020/11/17 3:48 下午
  */
-public interface StoreMessageService extends IService<StoreMessage> {
+@Service
+public class StoreMessageService extends ServiceImpl<StoreMessageMapper, StoreMessage>  {
 
+    
+    public boolean deleteByMessageId(String messageId) {
+        StoreMessage storeMessage = this.getById(messageId);
+        if (storeMessage != null) {
+            return this.removeById(messageId);
+        }
+        return false;
 
-    /**
-     * 通过消息id删除
-     *
-     * @param messageId 消息ID
-     * @return 操作结果
-     */
-    boolean deleteByMessageId(String messageId);
+    }
 
-    /**
-     * 多条件分页获取
-     *
-     * @param storeMessageQueryVO 店铺消息查询VO
-     * @param pageVO              分页
-     * @return 店铺消息分页
-     */
-    IPage<StoreMessage> getPage(StoreMessageQueryVO storeMessageQueryVO, PageVO pageVO);
+    
+    public IPage<StoreMessage> getPage(StoreMessageQueryVO storeMessageQueryVO, PageVO pageVO) {
 
-    /**
-     * 保存店铺消息信息
-     *
-     * @param messages 消息
-     * @return
-     */
-    boolean save(List<StoreMessage> messages);
+        QueryWrapper<StoreMessage> queryWrapper = new QueryWrapper<>();
+        //消息id查询
+        if (CharSequenceUtil.isNotEmpty(storeMessageQueryVO.getMessageId())) {
+            queryWrapper.eq("message_id", storeMessageQueryVO.getMessageId());
+        }
+        //商家id
+        if (CharSequenceUtil.isNotEmpty(storeMessageQueryVO.getStoreId())) {
+            queryWrapper.eq("store_id", storeMessageQueryVO.getStoreId());
+        }
+        //状态查询
+        if (storeMessageQueryVO.getStatus() != null) {
+            queryWrapper.eq("status", storeMessageQueryVO.getStatus());
+        }
+        queryWrapper.orderByDesc("status");
+        return this.baseMapper.queryByParams(PageUtil.initPage(pageVO), queryWrapper);
 
+    }
 
-    /**
-     * 修改店铺消息状态
-     *
-     * @param status 状态
-     * @param id     id
-     * @return
-     */
-    boolean editStatus(String status, String id);
+    
+    public boolean save(List<StoreMessage> messages) {
+        return saveBatch(messages);
+    }
 
+    
+    public boolean editStatus(String status, String id) {
+        StoreMessage storeMessage = this.getById(id);
+        if (storeMessage != null) {
+            //校验权限
+            if (!storeMessage.getStoreId().equals(UserContext.getCurrentUser().getStoreId())) {
+                throw new ServiceException(ResultCode.USER_AUTHORITY_ERROR.message());
+            }
+            storeMessage.setStatus(status);
+            return this.updateById(storeMessage);
+        }
+        return false;
+    }
 }

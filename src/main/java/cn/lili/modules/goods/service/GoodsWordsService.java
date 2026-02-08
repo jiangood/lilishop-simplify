@@ -1,13 +1,17 @@
 package cn.lili.modules.goods.service;
 
 import cn.lili.modules.goods.entity.dos.GoodsWords;
-import com.baomidou.mybatisplus.extension.service.IService;
+import cn.lili.modules.goods.mapper.GoodsWordsMapper;
+import cn.lili.modules.goods.service.GoodsWordsService;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.stereotype.Service;
 
 /**
- * 商品关键字业务层
+ * 商品关键字业务层实现
  *
  * @author paulG
  * @since 2020/10/15
  **/
-public interface GoodsWordsService extends IService<GoodsWords> {
+@Service
+public class GoodsWordsService extends ServiceImpl<GoodsWordsMapper, GoodsWords>  {
 }

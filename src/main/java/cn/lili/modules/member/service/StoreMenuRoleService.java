@@ -1,57 +1,98 @@
 package cn.lili.modules.member.service;
 
+import cn.lili.cache.Cache;
+import cn.lili.cache.CachePrefix;
+import cn.lili.common.security.context.UserContext;
+import cn.lili.common.security.enums.UserEnums;
 import cn.lili.modules.member.entity.dos.StoreMenuRole;
 import cn.lili.modules.member.entity.vo.StoreUserMenuVO;
-import com.baomidou.mybatisplus.extension.service.IService;
+import cn.lili.modules.member.mapper.StoreMenuRoleMapper;
+import cn.lili.modules.member.service.StoreMenuRoleService;
+import cn.lili.modules.member.service.StoreMenuService;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 /**
- * 角色菜单接口
+ * 角色菜单业务层实现
  *
  * @author Chopper
  * @since 2020/11/22 11:43
  */
-public interface StoreMenuRoleService extends IService<StoreMenuRole> {
+@Slf4j
+@Service
+@Transactional(rollbackFor = Exception.class)
+public class StoreMenuRoleService extends ServiceImpl<StoreMenuRoleMapper, StoreMenuRole>  {
 
     /**
-     * 通过角色获取菜单权限列表
-     *
-     * @param roleId
-     * @return
+     * 菜单
      */
-    List<StoreMenuRole> findByRoleId(String roleId);
+    @Autowired
+    @Lazy
+    private StoreMenuService storeMenuService;
+
+    @Autowired
+    private Cache<Object> cache;
+
+    
+    public List<StoreMenuRole> findByRoleId(String roleId) {
+        LambdaQueryWrapper<StoreMenuRole> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(StoreMenuRole::getRoleId, roleId);
+        return this.baseMapper.selectList(queryWrapper);
+    }
+
+    
+    public List<StoreUserMenuVO> findAllMenu(String clerkId, String memberId) {
+        String cacheKey = CachePrefix.STORE_USER_MENU.getPrefix() + memberId;
+        List<StoreUserMenuVO> menuList = (List<StoreUserMenuVO>) cache.get(cacheKey);
+        if (menuList == null || menuList.isEmpty()) {
+            menuList = storeMenuService.getUserRoleMenu(clerkId);
+            cache.put(cacheKey, menuList);
+        }
+        return menuList;
+    }
 
 
-    /**
-     * 根据角色集合获取拥有的菜单具体权限
-     *
-     * @param clerkId
-     * @return
-     */
-    List<StoreUserMenuVO> findAllMenu(String clerkId,String memberId);
+    
+    public void updateRoleMenu(String roleId, List<StoreMenuRole> roleMenus) {
+        try {
+            roleMenus.forEach(role -> role.setStoreId(UserContext.getCurrentUser().getStoreId()));
+            //删除角色已经绑定的菜单
+            this.delete(roleId);
+            //重新保存角色菜单关系
+            this.saveBatch(roleMenus);
 
+            cache.vagueDel(CachePrefix.PERMISSION_LIST.getPrefix(UserEnums.STORE));
+            cache.vagueDel(CachePrefix.STORE_USER_MENU.getPrefix());
+        } catch (Exception e) {
+            log.error("修改用户权限错误", e);
+        }
+    }
 
-    /**
-     * 更新某角色拥有到菜单
-     *
-     * @param roleId    角色id
-     * @param roleMenus
-     */
-    void updateRoleMenu(String roleId, List<StoreMenuRole> roleMenus);
+    
+    public void delete(String roleId) {
+        //删除
+        QueryWrapper<StoreMenuRole> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("role_id", roleId);
+        this.remove(queryWrapper);
+        cache.vagueDel(CachePrefix.PERMISSION_LIST.getPrefix(UserEnums.STORE));
+        cache.vagueDel(CachePrefix.STORE_USER_MENU.getPrefix());
+    }
 
-    /**
-     * 根据角色id 删除数据
-     *
-     * @param roleId
-     */
-    void delete(String roleId);
-
-    /**
-     * 根据角色id 删除数据
-     *
-     * @param roleId
-     */
-    void delete(List<String> roleId);
-
+    
+    public void delete(List<String> roleId) {
+        //删除
+        QueryWrapper<StoreMenuRole> queryWrapper = new QueryWrapper<>();
+        queryWrapper.in("role_id", roleId);
+        this.remove(queryWrapper);
+        cache.vagueDel(CachePrefix.PERMISSION_LIST.getPrefix(UserEnums.STORE));
+        cache.vagueDel(CachePrefix.STORE_USER_MENU.getPrefix());
+    }
 }

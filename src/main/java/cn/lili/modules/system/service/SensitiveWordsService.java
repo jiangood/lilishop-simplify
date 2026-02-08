@@ -1,19 +1,42 @@
 package cn.lili.modules.system.service;
 
+import cn.lili.cache.Cache;
 import cn.lili.modules.system.entity.dos.SensitiveWords;
-import com.baomidou.mybatisplus.extension.service.IService;
+import cn.lili.modules.system.mapper.SensitiveWordsMapper;
+import cn.lili.modules.system.service.SensitiveWordsService;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
- * 敏感词业务层
+ * 敏感词业务层实现
  *
  * @author Bulbasaur
  * @since 2020/11/17 8:02 下午
  */
-public interface SensitiveWordsService extends IService<SensitiveWords> {
+@Service
+public class SensitiveWordsService extends ServiceImpl<SensitiveWordsMapper, SensitiveWords>  {
 
-    /**
-     * 重新写入缓存
-     */
-    void resetSensitiveWordsFilter();
 
+
+    @PostConstruct
+    public void init() {
+        resetSensitiveWordsFilter();
+    }
+
+    
+    public void resetSensitiveWordsFilter() {
+        List<SensitiveWords> sensitiveWordsList = this.list();
+
+        if (sensitiveWordsList == null || sensitiveWordsList.isEmpty()) {
+            return;
+        }
+        List<String> sensitiveWords = sensitiveWordsList.stream().map(SensitiveWords::getSensitiveWord).collect(Collectors.toList());
+        // 实时更新敏感词过滤器
+        cn.lili.common.sensitive.SensitiveWordsFilter.init(sensitiveWords);
+    }
 }

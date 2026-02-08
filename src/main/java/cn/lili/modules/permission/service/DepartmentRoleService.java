@@ -1,39 +1,56 @@
 package cn.lili.modules.permission.service;
 
+import cn.lili.cache.Cache;
+import cn.lili.cache.CachePrefix;
+import cn.lili.common.security.enums.UserEnums;
 import cn.lili.modules.permission.entity.dos.DepartmentRole;
-import com.baomidou.mybatisplus.extension.service.IService;
+import cn.lili.modules.permission.mapper.DepartmentRoleMapper;
+import cn.lili.modules.permission.service.DepartmentRoleService;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 /**
- * 部门角色业务层
+ * 部门角色业务层实现
  *
  * @author Chopper
  * @since 2020/11/22 12:08
  */
-public interface DepartmentRoleService extends IService<DepartmentRole> {
+@Service
+public class DepartmentRoleService extends ServiceImpl<DepartmentRoleMapper, DepartmentRole>  {
 
-    /**
-     * 根据部门获取角色集合
-     *
-     * @param departmentId
-     * @return
-     */
-    List<DepartmentRole> listByDepartmentId(String departmentId);
+    @Autowired
+    private Cache cache;
 
+    
+    public List<DepartmentRole> listByDepartmentId(String departmentId) {
+        QueryWrapper queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("department_id", departmentId);
+        return this.baseMapper.selectList(queryWrapper);
+    }
 
-    /**
-     * 更新部门角色关联
-     *
-     * @param departmentId
-     * @param departmentRoles
-     */
-    void updateByDepartmentId(String departmentId, List<DepartmentRole> departmentRoles);
+    
+    @Transactional(rollbackFor = Exception.class)
+    public void updateByDepartmentId(String departmentId, List<DepartmentRole> departmentRoles) {
+        QueryWrapper queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("department_id", departmentId);
+        this.remove(queryWrapper);
 
-    /**
-     * 根据部门id删除部门与角色关联
-     *
-     * @param ids id集合
-     */
-    void deleteByDepartment(List<String> ids);
+        this.saveBatch(departmentRoles);
+        cache.vagueDel(CachePrefix.USER_MENU.getPrefix(UserEnums.MANAGER));
+        cache.vagueDel(CachePrefix.PERMISSION_LIST.getPrefix(UserEnums.MANAGER));
+    }
+
+    
+    public void deleteByDepartment(List<String> ids) {
+        QueryWrapper queryWrapper = new QueryWrapper<>();
+        queryWrapper.in("department_id", ids);
+        this.remove(queryWrapper);
+        cache.vagueDel(CachePrefix.USER_MENU.getPrefix(UserEnums.MANAGER));
+        cache.vagueDel(CachePrefix.PERMISSION_LIST.getPrefix(UserEnums.MANAGER));
+    }
 }

@@ -1,56 +1,116 @@
 package cn.lili.modules.member.service;
 
-
+import cn.lili.cache.Cache;
+import cn.lili.cache.CachePrefix;
+import cn.lili.common.enums.ResultCode;
+import cn.lili.common.exception.ServiceException;
+import cn.lili.common.security.context.UserContext;
+import cn.lili.common.security.enums.UserEnums;
 import cn.lili.modules.member.entity.dos.StoreRole;
-import com.baomidou.mybatisplus.extension.service.IService;
+import cn.lili.modules.member.mapper.StoreRoleMapper;
+import cn.lili.modules.member.service.StoreClerkRoleService;
+import cn.lili.modules.member.service.StoreDepartmentRoleService;
+import cn.lili.modules.member.service.StoreMenuRoleService;
+import cn.lili.modules.member.service.StoreRoleService;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 /**
- * 角色业务层
+ * 角色业务层实现
  *
  * @author Chopper
- * @since 2020/11/17 3:45 下午
+ * @since 2020/11/17 3:50 下午
  */
-public interface StoreRoleService extends IService<StoreRole> {
+@Service
+@Transactional(rollbackFor = Exception.class)
+public class StoreRoleService extends ServiceImpl<StoreRoleMapper, StoreRole>  {
 
     /**
-     * 获取默认角色
-     *
-     * @param defaultRole
-     * @return
+     * 部门角色
      */
-    List<StoreRole> findByDefaultRole(Boolean defaultRole);
-
-
+    @Autowired
+    private StoreDepartmentRoleService storeDepartmentRoleService;
     /**
-     * 批量删除角色
-     *
-     * @param roleIds
+     * 用户权限
      */
-    void deleteRoles(List<String> roleIds);
+    @Autowired
+    private StoreClerkRoleService storeClerkRoleService;
 
-    /**
-     * 修改角色
-     *
-     * @param storeRole 店铺角色
-     * @return
-     */
-    Boolean update(StoreRole storeRole);
+    @Autowired
+    private StoreMenuRoleService storeMenuRoleService;
 
-    /**
-     * 保存店铺角色
-     *
-     * @param storeRole 店铺角色
-     * @return
-     */
-    Boolean saveStoreRole(StoreRole storeRole);
+    @Autowired
+    private Cache cache;
 
-    /**
-     * 当前店铺 根据角色id查询角色
-     *
-     * @param ids 角色id
-     * @return
-     */
-    List<StoreRole> list(List<String> ids);
+    
+    public List<StoreRole> findByDefaultRole(Boolean defaultRole) {
+        QueryWrapper<StoreRole> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("default_role", true);
+        return baseMapper.selectList(queryWrapper);
+    }
+
+    
+    public void deleteRoles(List<String> roleIds) {
+        //校验是否为当前店铺
+        QueryWrapper queryWrapper = new QueryWrapper<>();
+        queryWrapper.in("id", roleIds);
+        List<StoreRole> roles = this.baseMapper.selectList(queryWrapper);
+        roles.forEach(role -> {
+            if (!role.getStoreId().equals(UserContext.getCurrentUser().getStoreId())) {
+                throw new ServiceException(ResultCode.USER_AUTHORITY_ERROR);
+            }
+        });
+        queryWrapper = new QueryWrapper<>();
+        queryWrapper.in("role_id", roleIds);
+        //校验是否绑定店铺部门
+        if (storeDepartmentRoleService.count(queryWrapper) > 0) {
+            throw new ServiceException(ResultCode.PERMISSION_DEPARTMENT_ROLE_ERROR);
+        }
+        //校验是否绑定店员
+        if (storeClerkRoleService.count(queryWrapper) > 0) {
+            throw new ServiceException(ResultCode.PERMISSION_USER_ROLE_ERROR);
+        }
+        //删除角色
+        this.removeByIds(roleIds);
+        //删除角色与菜单关联
+        storeMenuRoleService.remove(queryWrapper);
+        cache.vagueDel(CachePrefix.PERMISSION_LIST.getPrefix(UserEnums.STORE));
+        cache.vagueDel(CachePrefix.STORE_USER_MENU.getPrefix());
+    }
+
+    
+    public Boolean update(StoreRole storeRole) {
+        StoreRole storeRoleTemp = this.getById(storeRole.getId());
+        //校验店铺角色是否存在
+        if (storeRoleTemp == null) {
+            throw new ServiceException(ResultCode.PERMISSION_ROLE_NOT_FOUND_ERROR);
+        }
+        //校验店铺角色是否属于当前店铺
+        if (!storeRoleTemp.getStoreId().equals(UserContext.getCurrentUser().getStoreId())) {
+            throw new ServiceException(ResultCode.PERMISSION_ROLE_NOT_FOUND_ERROR);
+        }
+        cache.vagueDel(CachePrefix.PERMISSION_LIST.getPrefix(UserEnums.STORE));
+        cache.vagueDel(CachePrefix.STORE_USER_MENU.getPrefix());
+        return updateById(storeRole);
+    }
+
+
+    
+    public Boolean saveStoreRole(StoreRole storeRole) {
+        storeRole.setStoreId(UserContext.getCurrentUser().getStoreId());
+        return save(storeRole);
+    }
+
+    
+    public List<StoreRole> list(List<String> ids) {
+        QueryWrapper<StoreRole> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("store_id", UserContext.getCurrentUser().getStoreId());
+        queryWrapper.in("id", ids);
+        return this.baseMapper.selectList(queryWrapper);
+    }
 }

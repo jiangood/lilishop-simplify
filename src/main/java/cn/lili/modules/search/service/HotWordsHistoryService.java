@@ -2,33 +2,51 @@ package cn.lili.modules.search.service;
 
 import cn.lili.modules.search.entity.dos.HotWordsHistory;
 import cn.lili.modules.search.entity.dto.HotWordsSearchParams;
-import com.baomidou.mybatisplus.extension.service.IService;
+import cn.lili.modules.search.mapper.HotWordsHistoryMapper;
+import cn.lili.modules.search.service.HotWordsHistoryService;
+import cn.lili.modules.search.service.HotWordsService;
+import cn.lili.modules.statistics.entity.enums.SearchTypeEnum;
+import cn.lili.modules.statistics.util.StatisticsDateUtil;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 
 /**
- * HotWordsService
+ * 历史热词
  *
- * @author Chopper
- * @version v1.0
- * 2022-04-14 09:35
- */
-public interface HotWordsHistoryService extends IService<HotWordsHistory> {
+ * @author paulG
+ * @since 2020/10/15
+ **/
+@Service
+public class HotWordsHistoryService extends ServiceImpl<HotWordsHistoryMapper, HotWordsHistory>  {
 
-    /**
-     * 热词统计
-     *
-     * @param hotWordsSearchParams
-     * @return
-     */
-    List<HotWordsHistory> statistics(HotWordsSearchParams hotWordsSearchParams);
+    @Autowired
+    private HotWordsService hotWordsService;
 
-    /**
-     * 根据时间查询
-     *
-     * @param queryTime 查询时间
-     * @return
-     */
-    List<HotWordsHistory> queryByDay(Date queryTime);
+    
+    public List<HotWordsHistory> statistics(HotWordsSearchParams hotWordsSearchParams) {
+        if (hotWordsSearchParams.getSearchType().equals(SearchTypeEnum.TODAY.name())) {
+            return hotWordsService.getHotWordsVO(hotWordsSearchParams.getTop());
+        }
+        QueryWrapper queryWrapper = hotWordsSearchParams.queryWrapper();
+
+        queryWrapper.groupBy("keywords");
+        queryWrapper.orderByDesc("score");
+        queryWrapper.last("limit " + hotWordsSearchParams.getTop());
+        List<HotWordsHistory> list = baseMapper.statistics(queryWrapper);
+        return list;
+    }
+
+    
+    public List<HotWordsHistory> queryByDay(Date queryTime) {
+        QueryWrapper queryWrapper = new QueryWrapper();
+
+        Date[] dates = StatisticsDateUtil.getDateArray(queryTime);
+        queryWrapper.between("create_time", dates[0], dates[1]);
+        return list(queryWrapper);
+    }
+
 }

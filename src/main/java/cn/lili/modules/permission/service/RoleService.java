@@ -1,31 +1,72 @@
 package cn.lili.modules.permission.service;
 
-
+import cn.lili.cache.Cache;
+import cn.lili.cache.CachePrefix;
+import cn.lili.common.enums.ResultCode;
+import cn.lili.common.exception.ServiceException;
+import cn.lili.common.security.enums.UserEnums;
 import cn.lili.modules.permission.entity.dos.Role;
-import com.baomidou.mybatisplus.extension.service.IService;
+import cn.lili.modules.permission.mapper.RoleMapper;
+import cn.lili.modules.permission.service.DepartmentRoleService;
+import cn.lili.modules.permission.service.RoleMenuService;
+import cn.lili.modules.permission.service.RoleService;
+import cn.lili.modules.permission.service.UserRoleService;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 /**
- * 角色业务层
+ * 角色业务层实现
  *
  * @author Chopper
- * @since 2020/11/17 3:45 下午
+ * @since 2020/11/17 3:50 下午
  */
-public interface RoleService extends IService<Role> {
+@Service
+public class RoleService extends ServiceImpl<RoleMapper, Role>  {
 
     /**
-     * 获取默认角色
-     *
-     * @param defaultRole
-     * @return
+     * 部门角色
      */
-    List<Role> findByDefaultRole(Boolean defaultRole);
-
-
+    @Autowired
+    private DepartmentRoleService departmentRoleService;
     /**
-     * 批量删除角色
-     * @param roleIds
+     * 用户权限
      */
-    void deleteRoles(List<String> roleIds);
+    @Autowired
+    private UserRoleService userRoleService;
+
+    @Autowired
+    private RoleMenuService roleMenuService;
+    @Autowired
+    private Cache cache;
+
+    
+    public List<Role> findByDefaultRole(Boolean defaultRole) {
+        QueryWrapper<Role> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("default_role", true);
+        return baseMapper.selectList(queryWrapper);
+    }
+
+    
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteRoles(List<String> roleIds) {
+        QueryWrapper queryWrapper = new QueryWrapper<>();
+        queryWrapper.in("role_id", roleIds);
+        if (departmentRoleService.count(queryWrapper) > 0) {
+            throw new ServiceException(ResultCode.PERMISSION_DEPARTMENT_ROLE_ERROR);
+        }
+        if (userRoleService.count(queryWrapper) > 0) {
+            throw new ServiceException(ResultCode.PERMISSION_USER_ROLE_ERROR);
+        }
+        //删除角色
+        this.removeByIds(roleIds);
+        //删除角色与菜单关联
+        roleMenuService.remove(queryWrapper);
+        cache.vagueDel(CachePrefix.USER_MENU.getPrefix(UserEnums.MANAGER));
+        cache.vagueDel(CachePrefix.PERMISSION_LIST.getPrefix(UserEnums.MANAGER));
+    }
 }

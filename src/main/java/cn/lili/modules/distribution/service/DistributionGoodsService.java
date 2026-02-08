@@ -1,38 +1,83 @@
 package cn.lili.modules.distribution.service;
 
+import cn.lili.common.enums.ResultCode;
+import cn.lili.common.exception.ServiceException;
+import cn.lili.common.security.context.UserContext;
+import cn.lili.common.security.enums.UserEnums;
+import cn.lili.modules.distribution.entity.dos.Distribution;
 import cn.lili.modules.distribution.entity.dos.DistributionGoods;
 import cn.lili.modules.distribution.entity.dto.DistributionGoodsSearchParams;
 import cn.lili.modules.distribution.entity.vos.DistributionGoodsVO;
+import cn.lili.modules.distribution.mapper.DistributionGoodsMapper;
+import cn.lili.modules.distribution.service.DistributionGoodsService;
+import cn.lili.modules.distribution.service.DistributionService;
+import cn.lili.modules.goods.entity.dos.GoodsSku;
+import cn.lili.modules.goods.service.GoodsSkuService;
+import cn.lili.mybatis.util.PageUtil;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.service.IService;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Objects;
 
 
 /**
- * 分销商品业务层
+ * 分销商品接口实现
  *
  * @author pikachu
- * @since 2020-03-24 10:46:33
+ * @since 2020-03-24 23:04:56
  */
-public interface DistributionGoodsService extends IService<DistributionGoods> {
+@Service
+public class DistributionGoodsService extends ServiceImpl<DistributionGoodsMapper, DistributionGoods>  {
 
     /**
-     * 根据条件分页查询分销商品信息
-     *
-     * @param distributionGoodsSearchParams 商品条件
-     * @return 分页分销商品信息
+     * 分销员
      */
-    IPage<DistributionGoodsVO> goodsPage(DistributionGoodsSearchParams distributionGoodsSearchParams);
+    @Autowired
+    private DistributionService distributionService;
+    /**
+     * 规格商品
+     */
+    @Autowired
+    private GoodsSkuService goodsSkuService;
 
+    
+    public IPage<DistributionGoodsVO> goodsPage(DistributionGoodsSearchParams searchParams) {
+        //获取商家的分销商品列表
+        if (Objects.requireNonNull(UserContext.getCurrentUser()).getRole().equals(UserEnums.STORE)) {
+            return this.baseMapper.getDistributionGoodsVO(PageUtil.initPage(searchParams), searchParams.storeQueryWrapper());
+        } else if (UserContext.getCurrentUser().getRole().equals(UserEnums.MEMBER)) {
+            //判断当前登录用户是否为分销员
+            Distribution distribution = distributionService.getDistribution();
+            if (distribution != null) {
+                //判断查看已选择的分销商品列表
+                if (searchParams.isChecked()) {
+                    return this.baseMapper.selectGoods(PageUtil.initPage(searchParams), searchParams.distributionQueryWrapper(), distribution.getId());
+                } else {
+                    return this.baseMapper.notSelectGoods(PageUtil.initPage(searchParams), searchParams.distributionQueryWrapper(), distribution.getId());
+                }
+            }
+            throw new ServiceException(ResultCode.DISTRIBUTION_NOT_EXIST);
+        }
+        //如果是平台则直接进行查询
+        return this.baseMapper.getDistributionGoodsVO(PageUtil.initPage(searchParams), searchParams.distributionQueryWrapper());
+    }
 
     /**
      * 根据条件查询分销商品信息列表
      *
-     * @param distributionGoodsSearchParams 条件
+     * @param distributionGoodsSearchParams 商品条件
      * @return 分销商品信息列表
      */
-    List<DistributionGoods> getDistributionGoodsList(DistributionGoodsSearchParams distributionGoodsSearchParams);
+    
+    public List<DistributionGoods> getDistributionGoodsList(DistributionGoodsSearchParams distributionGoodsSearchParams) {
+        return this.list(distributionGoodsSearchParams.queryWrapper());
+    }
 
     /**
      * 根据条件查询分销商品信息
@@ -40,47 +85,56 @@ public interface DistributionGoodsService extends IService<DistributionGoods> {
      * @param distributionGoodsSearchParams 条件
      * @return 分销商品信息
      */
-    DistributionGoods getDistributionGoods(DistributionGoodsSearchParams distributionGoodsSearchParams);
+    
+    public DistributionGoods getDistributionGoods(DistributionGoodsSearchParams distributionGoodsSearchParams) {
+        return this.getOne(distributionGoodsSearchParams.queryWrapper(), false);
+    }
 
     /**
      * 根据条件删除分销商品
      *
      * @param distributionGoodsSearchParams 条件
      */
-    boolean deleteDistributionGoods(DistributionGoodsSearchParams distributionGoodsSearchParams);
+    
+    public boolean deleteDistributionGoods(DistributionGoodsSearchParams distributionGoodsSearchParams) {
+        return this.remove(distributionGoodsSearchParams.queryWrapper());
+    }
 
-    /**
-     * 获取分销商品
-     *
-     * @param id 分销商品ID
-     * @return 分销商品
-     */
-    DistributionGoods distributionGoodsVO(String id);
+    
+    public DistributionGoods distributionGoodsVO(String id) {
 
-    /**
-     * 获取分销商品
-     *
-     * @param skuId SKUId
-     * @return 分销商品
-     */
-    DistributionGoods distributionGoodsVOBySkuId(String skuId);
+        return this.getById(id);
+    }
 
-    /**
-     * 批量获取分销商品
-     *
-     * @param skuIds sku id集合
-     * @return 分销商品
-     */
-    List<DistributionGoods> distributionGoods(List<String> skuIds);
+    
+    public DistributionGoods distributionGoodsVOBySkuId(String skuId) {
+        return this.getOne(new LambdaUpdateWrapper<DistributionGoods>().eq(DistributionGoods::getSkuId, skuId));
+    }
 
-    /**
-     * 选择分销商品
-     *
-     * @param skuId      SKU ID
-     * @param commission 佣金
-     * @param storeId 店铺id
-     * @return
-     */
-    DistributionGoods checked(String skuId, Double commission, String storeId);
+    
+    public List<DistributionGoods> distributionGoods(List<String> skuIds) {
+        return this.list(new LambdaUpdateWrapper<DistributionGoods>().in(DistributionGoods::getSkuId, skuIds));
+    }
+
+    
+    public DistributionGoods checked(String skuId, Double commission, String storeId) {
+
+        //检查分销功能开关
+        distributionService.checkDistributionSetting();
+
+        //判断是否存在分销商品，如果存在不能添加
+        QueryWrapper queryWrapper = Wrappers.query().eq("sku_id", skuId);
+
+        if (this.getOne(queryWrapper) != null) {
+            throw new ServiceException(ResultCode.DISTRIBUTION_GOODS_DOUBLE);
+        }
+        GoodsSku goodsSku = goodsSkuService.getGoodsSkuByIdFromCache(skuId);
+        if (!goodsSku.getStoreId().equals(storeId)) {
+            throw new ServiceException(ResultCode.USER_AUTHORITY_ERROR);
+        }
+        DistributionGoods distributionGoods = new DistributionGoods(goodsSku, commission);
+        this.save(distributionGoods);
+        return distributionGoods;
+    }
 
 }

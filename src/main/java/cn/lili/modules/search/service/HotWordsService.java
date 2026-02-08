@@ -1,47 +1,92 @@
 package cn.lili.modules.search.service;
 
+import cn.lili.cache.Cache;
+import cn.lili.cache.CachePrefix;
+import cn.lili.cache.TypedTuple;
 import cn.lili.modules.search.entity.dos.HotWordsHistory;
 import cn.lili.modules.search.entity.dto.HotWordsDTO;
+import cn.lili.modules.search.service.HotWordsService;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
-import java.util.List;
+import java.util.*;
 
 /**
- * HotWordsService
+ * HotWordsServiceImpl
  *
  * @author Chopper
  * @version v1.0
  * 2022-04-14 09:35
  */
-public interface HotWordsService {
+@Slf4j
+@Service
+public class HotWordsService  {
 
     /**
-     * 获取热门关键词
-     *
-     * @param count 热词数量
-     * @return 热词集合
+     * 缓存
      */
-    List<String> getHotWords(Integer count);
+    @Autowired
+    private Cache<Object> cache;
 
-    /**
-     * 获取热门关键词
-     *
-     * @param count 热词数量
-     * @return 热词集合
-     */
-    List<HotWordsHistory> getHotWordsVO(Integer count);
+    
+    public List<String> getHotWords(Integer count) {
+        if (count == null) {
+            count = 0;
+        }
+        List<String> hotWords = new ArrayList<>();
+        // redis 排序中，下标从0开始，所以这里需要 -1 处理
+        count = count - 1;
+        Set<TypedTuple<Object>> set = cache.reverseRangeWithScores(CachePrefix.HOT_WORD.getPrefix(), count);
+        if (set == null || set.isEmpty()) {
+            return new ArrayList<>();
+        }
+        for (TypedTuple<Object> defaultTypedTuple : set) {
+            hotWords.add(Objects.requireNonNull(defaultTypedTuple.getValue()).toString());
+        }
+        return hotWords;
+    }
 
-    /**
-     * 设置热门关键词
-     *
-     * @param hotWords 热词分数
-     */
-    void setHotWords(HotWordsDTO hotWords);
+    
+    public List<HotWordsHistory> getHotWordsVO(Integer count) {
+        if (count == null) {
+            count = 50;
+        }
+        List<HotWordsHistory> hotWords = new ArrayList<>();
+        // redis 排序中，下标从0开始，所以这里需要 -1 处理
+        count = count - 1;
+        Set<TypedTuple<Object>> set = cache.reverseRangeWithScores(CachePrefix.HOT_WORD.getPrefix(), count);
+        if (set == null || set.isEmpty()) {
+            return new ArrayList<>();
+        }
+        for (TypedTuple<Object> defaultTypedTuple : set) {
+            try {
+                hotWords.add(new HotWordsHistory(defaultTypedTuple.getValue().toString(),
+                        defaultTypedTuple.getScore().intValue()));
+            } catch (Exception e) {
+                log.error("读取热词错误", e);
+            }
+
+        }
+
+
+        Collections.sort(hotWords);
+        return hotWords;
+    }
+
+    
+    public void setHotWords(HotWordsDTO hotWords) {
+        cache.incrementScore(CachePrefix.HOT_WORD.getPrefix(), hotWords.getKeywords(), hotWords.getPoint());
+    }
 
     /**
      * 删除热门关键词
      *
      * @param keywords 热词
      */
-    void deleteHotWords(String keywords);
+    
+    public void deleteHotWords(String keywords) {
+        cache.zRemove(CachePrefix.HOT_WORD.getPrefix(), keywords);
+    }
 
 }

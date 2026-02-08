@@ -1,35 +1,62 @@
 package cn.lili.modules.statistics.service;
 
+import cn.lili.common.utils.DateUtil;
+import cn.lili.common.utils.StringUtils;
 import cn.lili.common.vo.PageVO;
 import cn.lili.modules.order.order.entity.dos.StoreFlow;
+import cn.lili.modules.order.order.entity.enums.FlowTypeEnum;
 import cn.lili.modules.statistics.entity.dto.StatisticsQueryParam;
+import cn.lili.modules.statistics.entity.enums.TimeTypeEnum;
 import cn.lili.modules.statistics.entity.vo.RefundOrderStatisticsDataVO;
+import cn.lili.modules.statistics.mapper.RefundOrderStatisticsMapper;
+import cn.lili.modules.statistics.service.RefundOrderStatisticsService;
+import cn.lili.mybatis.util.PageUtil;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.service.IService;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.stereotype.Service;
 
 /**
- * 退款订单统计业务层
+ * 退款订单统计业务层实现
  *
  * @author Bulbasaur
- * @since 2020/12/9 11:06
+ * @since 2020/12/10 11:30
  */
-public interface RefundOrderStatisticsService extends IService<StoreFlow> {
+@Service
+public class RefundOrderStatisticsService extends ServiceImpl<RefundOrderStatisticsMapper, StoreFlow>  {
+
+    
+    public IPage<RefundOrderStatisticsDataVO> getRefundOrderStatisticsData(PageVO pageVO, StatisticsQueryParam statisticsQueryParam) {
+        QueryWrapper queryWrapper = getQueryWrapper(statisticsQueryParam);
+        return this.baseMapper.getRefundStatisticsData(PageUtil.initPage(pageVO), queryWrapper);
+    }
+
+    
+    public Double getRefundOrderStatisticsPrice(StatisticsQueryParam statisticsQueryParam) {
+
+        QueryWrapper queryWrapper = getQueryWrapper(statisticsQueryParam);
+        queryWrapper.select("SUM(final_price) AS price");
+        return Double.parseDouble(this.getMap(queryWrapper).get("price").toString());
+    }
 
 
-    /**
-     * 查询订单统计分页
-     *
-     * @param statisticsQueryParam 查询参数
-     * @param pageVO               分页
-     * @return 退款统计
-     */
-    IPage<RefundOrderStatisticsDataVO> getRefundOrderStatisticsData(PageVO pageVO, StatisticsQueryParam statisticsQueryParam);
+    private QueryWrapper getQueryWrapper(StatisticsQueryParam statisticsQueryParam) {
 
-    /**
-     * 查询退款订单统计金额
-     *
-     * @param statisticsQueryParam 查询参数
-     * @return 退款统计金额
-     */
-    Double getRefundOrderStatisticsPrice(StatisticsQueryParam statisticsQueryParam);
+        QueryWrapper queryWrapper = Wrappers.query();
+
+        //判断搜索类型是：年、月
+        if (statisticsQueryParam.getTimeType().equals(TimeTypeEnum.MONTH.name())) {
+            queryWrapper.between("create_time", DateUtil.getBeginTime(statisticsQueryParam.getYear(), statisticsQueryParam.getMonth()), DateUtil.getEndTime(statisticsQueryParam.getYear(), statisticsQueryParam.getMonth()));
+        } else {
+            queryWrapper.between("create_time", DateUtil.getBeginTime(statisticsQueryParam.getYear(), 1), DateUtil.getEndTime(statisticsQueryParam.getYear(), 12));
+        }
+
+        //设置店铺ID
+        queryWrapper.eq(!StringUtils.isEmpty(statisticsQueryParam.getStoreId()), "store_id", statisticsQueryParam.getStoreId());
+
+        //设置为退款查询
+        queryWrapper.eq("flow_type", FlowTypeEnum.REFUND);
+        return queryWrapper;
+    }
 }

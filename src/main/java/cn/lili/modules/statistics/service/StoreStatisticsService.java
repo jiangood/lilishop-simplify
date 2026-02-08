@@ -1,34 +1,46 @@
 package cn.lili.modules.statistics.service;
 
+import cn.hutool.core.date.DateTime;
+import cn.hutool.core.date.DateUtil;
+import cn.lili.modules.statistics.mapper.StoreStatisticsMapper;
+import cn.lili.modules.statistics.service.StoreStatisticsService;
 import cn.lili.modules.store.entity.dos.Store;
-import com.baomidou.mybatisplus.extension.service.IService;
+import cn.lili.modules.store.entity.enums.StoreStatusEnum;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.stereotype.Service;
 
 /**
- * 店铺统计业务层
+ * 商品统计业务层实现
  *
  * @author Bulbasaur
- * @since 2020/12/9 11:06
+ * @since 2020/12/9 11:30
  */
-public interface StoreStatisticsService extends IService<Store> {
+@Service
+public class StoreStatisticsService extends ServiceImpl<StoreStatisticsMapper, Store>  {
 
-    /**
-     * 获取待审核店铺数量
-     *
-     * @return 待审核店铺数量
-     */
-    long auditNum();
 
-    /**
-     * 获取所有店铺数量
-     *
-     * @return 店铺总数
-     */
-    long storeNum();
+    
+    public long auditNum() {
+        LambdaQueryWrapper<Store> queryWrapper = Wrappers.lambdaQuery();
+        queryWrapper.eq(Store::getStoreDisable, StoreStatusEnum.APPLYING.name());
+        return this.count(queryWrapper);
+    }
 
-    /**
-     * 获取今天的店铺数量
-     *
-     * @return 今天的店铺数量
-     */
-    long todayStoreNum();
+    
+    public long storeNum() {
+        LambdaQueryWrapper<Store> queryWrapper = Wrappers.lambdaQuery();
+        queryWrapper.eq(Store::getStoreDisable, StoreStatusEnum.OPEN.name());
+        return this.count(queryWrapper);
+    }
+
+    
+    public long todayStoreNum() {
+        LambdaQueryWrapper<Store> queryWrapper = Wrappers.lambdaQuery();
+        queryWrapper.eq(Store::getStoreDisable, StoreStatusEnum.OPEN.name());
+        queryWrapper.ge(Store::getCreateTime, DateUtil.beginOfDay(new DateTime()));
+        return this.count(queryWrapper);
+    }
+
 }

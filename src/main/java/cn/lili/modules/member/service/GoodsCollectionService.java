@@ -1,64 +1,83 @@
 package cn.lili.modules.member.service;
 
+import cn.lili.common.enums.ResultCode;
+import cn.lili.common.exception.ServiceException;
+import cn.lili.common.security.context.UserContext;
 import cn.lili.common.vo.PageVO;
 import cn.lili.modules.member.entity.dos.GoodsCollection;
 import cn.lili.modules.member.entity.vo.GoodsCollectionVO;
+import cn.lili.modules.member.mapper.GoodsCollectionMapper;
+import cn.lili.modules.member.service.GoodsCollectionService;
+import cn.lili.mybatis.util.PageUtil;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.service.IService;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
- * 商品收藏业务层
+ * 会员收藏业务层实现
  *
  * @author Chopper
  * @since 2020/11/18 2:25 下午
  */
-public interface GoodsCollectionService extends IService<GoodsCollection> {
+@Service
+public class GoodsCollectionService extends ServiceImpl<GoodsCollectionMapper, GoodsCollection>  {
 
-    /**
-     * 获取商品搜索分页
-     *
-     * @param pageVo 查询参数
-     * @return 商品搜索分页
-     */
-    IPage<GoodsCollectionVO> goodsCollection(PageVO pageVo);
 
-    /**
-     * 是否收藏商品
-     *
-     * @param skuId 规格ID
-     * @return 是否收藏
-     */
-    boolean isCollection(String skuId);
+    
+    public IPage<GoodsCollectionVO> goodsCollection(PageVO pageVo) {
+        QueryWrapper<GoodsCollectionVO> queryWrapper = new QueryWrapper();
+        queryWrapper.eq("gc.member_id", UserContext.getCurrentUser().getId());
+        queryWrapper.groupBy("gc.id");
+        queryWrapper.orderByDesc("gc.create_time");
+        return this.baseMapper.goodsCollectionVOList(PageUtil.initPage(pageVo), queryWrapper);
+    }
 
-    /**
-     * 添加商品收藏
-     *
-     * @param skuId 规格ID
-     * @return 操作状态
-     */
-    GoodsCollection addGoodsCollection(String skuId);
+    
+    public boolean isCollection(String skuId) {
+        QueryWrapper<GoodsCollection> queryWrapper = new QueryWrapper();
+        queryWrapper.eq("member_id", UserContext.getCurrentUser().getId());
+        queryWrapper.eq(skuId != null, "sku_id", skuId);
+        return Optional.ofNullable(this.getOne(queryWrapper)).isPresent();
+    }
 
-    /**
-     * 商品收藏
-     *
-     * @param skuId 规格ID
-     * @return 操作状态
-     */
-    boolean deleteGoodsCollection(String skuId);
-    /**
-     * 删除商品收藏
-     *
-     * @param goodsIds 规格ID
-     * @return 操作状态
-     */
-    boolean deleteGoodsCollection(List<String> goodsIds);
-    /**
-     * 删除商品SKU收藏
-     *
-     * @param skuIds 规格ID
-     * @return 操作状态
-     */
-    boolean deleteSkuCollection(List<String> skuIds);
+    
+    public GoodsCollection addGoodsCollection(String skuId) {
+        GoodsCollection goodsCollection = this.getOne(new LambdaUpdateWrapper<GoodsCollection>()
+                .eq(GoodsCollection::getMemberId, UserContext.getCurrentUser().getId())
+                .eq(GoodsCollection::getSkuId, skuId));
+        if (goodsCollection == null) {
+            goodsCollection = new GoodsCollection(UserContext.getCurrentUser().getId(), skuId);
+
+            this.save(goodsCollection);
+            return goodsCollection;
+        }
+        throw new ServiceException(ResultCode.USER_COLLECTION_EXIST);
+    }
+
+    
+    public boolean deleteGoodsCollection(String skuId) {
+        QueryWrapper<GoodsCollection> queryWrapper = new QueryWrapper();
+        queryWrapper.eq("member_id", UserContext.getCurrentUser().getId());
+        queryWrapper.eq(skuId != null, "sku_id", skuId);
+        return this.remove(queryWrapper);
+    }
+
+    
+    public boolean deleteGoodsCollection(List<String> goodsIds) {
+        QueryWrapper<GoodsCollection> queryWrapper = new QueryWrapper();
+        queryWrapper.in("sku_id", goodsIds);
+        return this.remove(queryWrapper);
+    }
+
+    
+    public boolean deleteSkuCollection(List<String> skuIds) {
+        QueryWrapper<GoodsCollection> queryWrapper = new QueryWrapper();
+        queryWrapper.in("sku_id", skuIds);
+        return this.remove(queryWrapper);
+    }
 }

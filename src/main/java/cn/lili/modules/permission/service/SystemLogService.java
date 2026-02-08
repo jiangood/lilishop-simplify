@@ -1,49 +1,60 @@
 package cn.lili.modules.permission.service;
 
+import cn.hutool.core.text.CharSequenceUtil;
 import cn.lili.common.vo.PageVO;
 import cn.lili.common.vo.SearchVO;
 import cn.lili.modules.permission.entity.vo.SystemLog;
+import cn.lili.modules.permission.repository.SystemLogRepository;
+import cn.lili.modules.permission.service.SystemLogService;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 系统日志业务层
+ * 系统日志
  *
  * @author Chopper
  * @since 2020/11/17 3:45 下午
  */
-public interface SystemLogService {
+@Service
+public class SystemLogService  {
 
-    /**
-     * 添加日志
-     *
-     * @param systemLogVO
-     * @return
-     */
-    void saveLog(SystemLog systemLogVO);
+    @Autowired
+    private SystemLogRepository systemLogRepository;
 
-    /**
-     * 通过id删除日志
-     *
-     * @param id
-     */
-    void deleteLog(List<String> id);
 
-    /**
-     * 删除全部日志
-     */
-    void flushAll();
 
-    /**
-     * 分页搜索获取日志
-     *
-     * @param key          关键字
-     * @param searchVo     查询VO
-     * @param pageVO       分页
-     * @param operatorName 操作人
-     * @param storeId      店铺ID
-     * @return 日志分页
-     */
-    Page<SystemLog> queryLog(String storeId, String operatorName, String key, SearchVO searchVo, PageVO pageVO);
+    
+    public void saveLog(SystemLog systemLogVO) {
+        systemLogRepository.save(systemLogVO);
+    }
+
+    
+    public void deleteLog(List<String> id) {
+        for (String s : id) {
+            systemLogRepository.deleteById(s);
+        }
+    }
+
+    
+    public void flushAll() {
+        systemLogRepository.deleteAll();
+    }
+
+
+    
+    public Page<SystemLog> queryLog(String storeId, String operatorName, String key, SearchVO searchVo, PageVO pageVO) {
+       // TODO
+        return null;
+    }
+
+
+
+
 }

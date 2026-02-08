@@ -1,41 +1,49 @@
 package cn.lili.modules.member.service;
 
 import cn.lili.modules.member.entity.dos.StoreClerkRole;
-import com.baomidou.mybatisplus.extension.service.IService;
+import cn.lili.modules.member.mapper.StoreClerkRoleMapper;
+import cn.lili.modules.member.service.StoreClerkRoleService;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 店铺店员角色业务层
+ * 用户权限业务层实现
  *
  * @author Chopper
- * @since 2020/11/17 3:46 下午
+ * @since 2020/11/17 3:52 下午
  */
-public interface StoreClerkRoleService extends IService<StoreClerkRole> {
+@Service
+@Transactional(rollbackFor = Exception.class)
+public class StoreClerkRoleService extends ServiceImpl<StoreClerkRoleMapper, StoreClerkRole>  {
 
-    /**
-     * 根据用户查看拥有的角色
-     *
-     * @param clerkId 店员id
-     * @return
-     */
-    List<StoreClerkRole> listByUserId(String clerkId);
+    
+    public List<StoreClerkRole> listByUserId(String clerkId) {
+        QueryWrapper<StoreClerkRole> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("clerk_id", clerkId);
+        return this.baseMapper.selectList(queryWrapper);
+    }
 
-    /**
-     * 根据店员id查看角色
-     *
-     * @param clerkId 店员id
-     * @return
-     */
-    List<String> listId(String clerkId);
+    
+    public List<String> listId(String clerkId) {
+        List<StoreClerkRole> userRoleList = this.listByUserId(clerkId);
+        List<String> strings = new ArrayList<>();
+        userRoleList.forEach(item -> strings.add(item.getRoleId()));
+        return strings;
+    }
 
-    /**
-     * 更新用户拥有的角色
-     *
-     * @param clerkId         店员id
-     * @param storeClerkRoles 角色权限
-     */
-    void updateClerkRole(String clerkId, List<StoreClerkRole> storeClerkRoles);
-
+    
+    public void updateClerkRole(String clerkId, List<StoreClerkRole> storeClerkRoles) {
+        //删除
+        QueryWrapper<StoreClerkRole> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("clerk_id", clerkId);
+        this.remove(queryWrapper);
+        //保存
+        this.saveBatch(storeClerkRoles);
+    }
 
 }

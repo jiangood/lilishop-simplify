@@ -3,70 +3,76 @@ package cn.lili.modules.goods.service;
 import cn.lili.modules.goods.entity.dos.CategoryBrand;
 import cn.lili.modules.goods.entity.dos.Category;
 import cn.lili.modules.goods.entity.vos.CategoryBrandVO;
-import com.baomidou.mybatisplus.extension.service.IService;
+import cn.lili.modules.goods.mapper.CategoryBrandMapper;
+import cn.lili.modules.goods.service.CategoryBrandService;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 商品分类品牌业务层
+ * 规格项业务层实现
  *
  * @author pikachu
- * @since 2020-02-26 16:18:56
+ * @since 2020-02-18 16:18:56
  */
-public interface CategoryBrandService extends IService<CategoryBrand> {
-    /**
-     * 根据分类id查询品牌信息
-     *
-     * @param categoryId 分类id
-     * @return 分类品牌关联信息列表
-     */
-    List<CategoryBrandVO> getCategoryBrandList(String categoryId);
+@Service
+public class CategoryBrandService extends ServiceImpl<CategoryBrandMapper, CategoryBrand>  {
 
-    /**
-     * 通过分类ID删除关联品牌
-     *
-     * @param categoryId 品牌ID
-     */
-    void deleteByCategoryId(String categoryId);
+    
+    public List<CategoryBrandVO> getCategoryBrandList(String categoryId) {
+        return this.baseMapper.getCategoryBrandList(categoryId);
+    }
 
-    /**
-     * 根据品牌id查询分类信息
-     *
-     * @param brandId 品牌id
-     * @return 品牌分类关联信息列表
-     */
-    List<Category> getBrandCategoryList(String brandId);
+    
+    public void deleteByCategoryId(String categoryId) {
+        this.baseMapper.delete(new LambdaUpdateWrapper<CategoryBrand>().eq(CategoryBrand::getCategoryId, categoryId));
+    }
 
-    /**
-     * 通过品牌ID删除关联分类
-     *
-     * @param brandId 品牌ID
-     */
-    void deleteByBrandId(String brandId);
+    
+    public List<Category> getBrandCategoryList(String brandId) {
+        return this.baseMapper.getBrandCategoryList(brandId);
+    }
 
+    
+    public void deleteByBrandId(String brandId) {
+        this.baseMapper.delete(new LambdaUpdateWrapper<CategoryBrand>().eq(CategoryBrand::getBrandId, brandId));
+    }
 
-    /**
-     * 根据品牌ID获取分类品牌关联信息
-     *
-     * @param brandId 品牌ID
-     * @return 分类品牌关联信息
-     */
-    List<CategoryBrand> getCategoryBrandListByBrandId(List<String> brandId);
+    
+    public List<CategoryBrand> getCategoryBrandListByBrandId(List<String> brandId) {
+        return this.list(new LambdaQueryWrapper<CategoryBrand>().in(CategoryBrand::getBrandId, brandId));
+    }
 
-    /**
-     * 保存分类品牌关系
-     *
-     * @param categoryId 分类id
-     * @param brandIds   品牌ids
-     */
-    void saveCategoryBrandList(String categoryId, List<String> brandIds);
+    
+    @Transactional(rollbackFor = Exception.class)
+    public void saveCategoryBrandList(String categoryId, List<String> brandIds) {
+        //删除分类品牌绑定信息
+        this.deleteByCategoryId(categoryId);
+        //绑定品牌信息
+        if (!brandIds.isEmpty()) {
+            List<CategoryBrand> categoryBrands = new ArrayList<>();
+            for (String brandId : brandIds) {
+                categoryBrands.add(new CategoryBrand(categoryId, brandId));
+            }
+            this.saveBatch(categoryBrands);
+        }
+    }
 
-    /**
-     * 保存品牌分类关系
-     *
-     * @param brandId 品牌id
-     * @param categoryIds 分类ids
-     */
-    void saveBrandCategoryList(String brandId, List<String> categoryIds);
-
+    
+    @Transactional(rollbackFor = Exception.class)
+    public void saveBrandCategoryList(String brandId, List<String> categoryIds) {
+        this.deleteByBrandId(brandId);
+        if (!categoryIds.isEmpty()) {
+            List<CategoryBrand> categoryBrands = new ArrayList<>();
+            for (String categoryId : categoryIds) {
+                categoryBrands.add(new CategoryBrand(categoryId, brandId));
+            }
+            this.saveBatch(categoryBrands);
+        }
+    }
 }

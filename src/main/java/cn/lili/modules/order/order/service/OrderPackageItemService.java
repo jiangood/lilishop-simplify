@@ -1,17 +1,24 @@
 package cn.lili.modules.order.order.service;
 
 import cn.lili.modules.order.order.entity.dos.OrderPackageItem;
-import com.baomidou.mybatisplus.extension.service.IService;
+import cn.lili.modules.order.order.mapper.OrderPackageItemMapper;
+import cn.lili.modules.order.order.service.OrderPackageItemService;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 /**
- * 子订单业务层
+ * 订单包裹业务层实现
  *
  * @author Chopper
- * @since 2020/11/17 7:36 下午
+ * @since 2020/11/17 7:38 下午
  */
-public interface OrderPackageItemService extends IService<OrderPackageItem> {
+@Service
+@Transactional(rollbackFor = Exception.class)
+public class OrderPackageItemService extends ServiceImpl<OrderPackageItemMapper, OrderPackageItem>  {
 
 
     /**
@@ -19,13 +26,18 @@ public interface OrderPackageItemService extends IService<OrderPackageItem> {
      * @param orderSn 订单编号
      * @return 子订单包裹列表
      */
-    List<OrderPackageItem> getOrderPackageItemListByOrderSn(String orderSn);
-
+    
+    public List<OrderPackageItem> getOrderPackageItemListByOrderSn(String orderSn) {
+        return this.list(new LambdaQueryWrapper<OrderPackageItem>().eq(OrderPackageItem::getOrderSn, orderSn));
+    }
 
     /**
      * 根据包裹编号获取子包裹列表
      * @param packageNo 包裹编号
      * @return 子包裹列表
      */
-    List<OrderPackageItem> getOrderPackageItemListByPno(String packageNo);
+    
+    public List<OrderPackageItem> getOrderPackageItemListByPno(String packageNo) {
+        return this.list(new LambdaQueryWrapper<OrderPackageItem>().eq(OrderPackageItem::getPackageNo, packageNo));
+    }
 }

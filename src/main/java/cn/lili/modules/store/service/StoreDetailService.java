@@ -1,127 +1,129 @@
 package cn.lili.modules.store.service;
 
 import cn.hutool.core.date.DateTime;
+import cn.hutool.core.map.MapUtil;
+import cn.lili.cache.Cache;
+import cn.lili.cache.CachePrefix;
+import cn.lili.common.message.Topic;
+import cn.lili.framework.queue.MessageQueueTemplate;
+import cn.lili.common.security.AuthUser;
+import cn.lili.common.security.context.UserContext;
+import cn.lili.common.utils.BeanUtil;
+import cn.lili.modules.goods.entity.dos.Category;
+import cn.lili.modules.goods.service.CategoryService;
+import cn.lili.modules.goods.service.GoodsService;
+import cn.lili.modules.search.utils.EsIndexUtil;
 import cn.lili.modules.store.entity.dos.Store;
 import cn.lili.modules.store.entity.dos.StoreDetail;
-import cn.lili.modules.store.entity.dto.*;
+import cn.lili.modules.store.entity.dto.StoreAfterSaleAddressDTO;
+import cn.lili.modules.store.entity.dto.StoreDeliverGoodsAddressDTO;
+import cn.lili.modules.store.entity.dto.StoreSettingDTO;
+import cn.lili.modules.store.entity.dto.StoreSettlementDay;
 import cn.lili.modules.store.entity.vos.StoreBasicInfoVO;
 import cn.lili.modules.store.entity.vos.StoreDetailVO;
 import cn.lili.modules.store.entity.vos.StoreManagementCategoryVO;
 import cn.lili.modules.store.entity.vos.StoreOtherVO;
-import com.baomidou.mybatisplus.extension.service.IService;
+import cn.lili.modules.store.mapper.StoreDetailMapper;
+import cn.lili.modules.store.service.StoreDetailService;
+import cn.lili.modules.store.service.StoreService;
+import cn.lili.rocketmq.tags.GoodsTagsEnum;
+import cn.lili.rocketmq.tags.StoreTagsEnum;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
-import java.util.List;
+import java.util.*;
 
 /**
- * 店铺详细业务层
+ * 店铺详细业务层实现
  *
  * @author pikachu
- * @since 2020-03-07 09:24:33
+ * @since 2020-03-07 16:18:56
  */
-public interface StoreDetailService extends IService<StoreDetail> {
-    /**
-     * 根据店铺ID获取店铺信息VO
-     *
-     * @param storeId 店铺ID
-     * @return 店铺信息VO
-     */
-    StoreDetailVO getStoreDetailVO(String storeId);
+@Service
+public class StoreDetailService extends ServiceImpl<StoreDetailMapper, StoreDetail>  {
 
     /**
-     * 根据会员ID获取店铺信息VO
-     *
-     * @param memberId 会员ID
-     * @return 店铺信息VO
+     * 店铺
      */
-    StoreDetailVO getStoreDetailVOByMemberId(String memberId);
-
+    @Autowired
+    private StoreService storeService;
     /**
-     * 根据店铺ID获取店铺信息DO
-     *
-     * @param storeId 店铺ID
-     * @return 店铺信息DO
+     * 分类
      */
-    StoreDetail getStoreDetail(String storeId);
+    @Autowired
+    private CategoryService categoryService;
 
-    /**
-     * 修改商家设置
-     *
-     * @param storeSettingDTO 店铺设置信息
-     * @return 店铺详情
-     */
-    Boolean editStoreSetting(StoreSettingDTO storeSettingDTO);
+    @Autowired
+    private GoodsService goodsService;
 
-    /**
-     * 获取店铺基本信息
-     * 用于前端店铺信息展示
-     *
-     * @param storeId 店铺ID
-     * @return 店铺基本信息
-     */
-    StoreBasicInfoVO getStoreBasicInfoDTO(String storeId);
+    @Autowired
+    private MessageQueueTemplate messageQueueTemplate;
 
-    /**
-     * 获取当前登录店铺售后收件地址
-     *
-     * @return 店铺售后收件地址
-     */
-    StoreAfterSaleAddressDTO getStoreAfterSaleAddressDTO();
+    @Autowired
+    private Cache cache;
 
-    /**
-     * 获取某一个店铺的退货收件地址信息
-     *
-     * @param id 店铺ID
-     * @return 店铺售后收件地址
-     */
-    StoreAfterSaleAddressDTO getStoreAfterSaleAddressDTO(String id);
+    
+    public StoreDetailVO getStoreDetailVO(String storeId) {
+        StoreDetailVO storeDetailVO = (StoreDetailVO) cache.get(CachePrefix.STORE.getPrefix() + storeId);
+        if (storeDetailVO == null) {
+            storeDetailVO = this.baseMapper.getStoreDetail(storeId);
+            cache.put(CachePrefix.STORE.getPrefix() + storeId, storeDetailVO, 7200L);
+        }
+        return storeDetailVO;
+    }
 
-    /**
-     * 修改当前登录店铺售后收件地址
-     *
-     * @param storeAfterSaleAddressDTO 店铺售后DTO
-     * @return 店铺售后收件地址
-     */
-    boolean editStoreAfterSaleAddressDTO(StoreAfterSaleAddressDTO storeAfterSaleAddressDTO);
+    
+    public StoreDetailVO getStoreDetailVOByMemberId(String memberId) {
+        return this.baseMapper.getStoreDetailByMemberId(memberId);
+    }
 
+    
+    public StoreDetail getStoreDetail(String storeId) {
+        LambdaQueryWrapper<StoreDetail> lambdaQueryWrapper = Wrappers.lambdaQuery();
+        lambdaQueryWrapper.eq(StoreDetail::getStoreId, storeId);
+        return this.getOne(lambdaQueryWrapper);
+    }
 
+    
+    public Boolean editStoreSetting(StoreSettingDTO storeSettingDTO) {
+        AuthUser tokenUser = Objects.requireNonNull(UserContext.getCurrentUser());
+        //修改店铺
+        Store store = storeService.getById(tokenUser.getStoreId());
+        BeanUtil.copyProperties(storeSettingDTO, store);
+        boolean result = storeService.updateById(store);
+        if (result) {
+            this.updateStoreGoodsInfo(store);
+            this.removeCache(store.getId());
+        }
+        //发送订单变更mq消息
+        messageQueueTemplate.send(Topic.STORE, StoreTagsEnum.EDIT_STORE_SETTING.name(), store);
+        return result;
+    }
 
-    /**
-     * 修改店铺库存预警数量
-     *
-     * @param stockWarning 库存预警数量
-     * @return 操作状态
-     */
-    boolean updateStockWarning(Integer stockWarning);
+    
+    public void updateStoreGoodsInfo(Store store) {
 
-    /**
-     * 获取店铺经营范围
-     *
-     * @param storeId 店铺ID
-     * @return 店铺经营范围
-     */
-    List<StoreManagementCategoryVO> goodsManagementCategory(String storeId);
+        goodsService.updateStoreDetail(store);
 
-    /**
-     * 获取店铺其他信息
-     *
-     * @param storeId 店铺ID
-     * @return 店铺其他信息
-     */
-    StoreOtherVO getStoreOtherVO(String storeId);
+        Map<String, Object> updateIndexFieldsMap = EsIndexUtil.getUpdateIndexFieldsMap(
+                MapUtil.builder(new HashMap<String, Object>()).put("storeId", store.getId()).build(),
+                MapUtil.builder(new HashMap<String, Object>()).put("storeName", store.getStoreName()).put("selfOperated", store.getSelfOperated()).build());
+        //发送mq消息
+        messageQueueTemplate.send(Topic.GOODS, GoodsTagsEnum.UPDATE_GOODS_INDEX_FIELD.name(), updateIndexFieldsMap);
+    }
 
-    /**
-     * 更新店铺内所有商品信息
-     *
-     * @param store 店铺信息
-     */
-    void updateStoreGoodsInfo(Store store);
-
-    /**
-     * 修改店铺udesk字段设置
-     *
-     * @param merchantEuid 店铺客服信息
-     */
-    Boolean editMerchantEuid(String merchantEuid);
+    
+    public Boolean editMerchantEuid(String merchantEuid) {
+        AuthUser tokenUser = Objects.requireNonNull(UserContext.getCurrentUser());
+        Store store = storeService.getById(tokenUser.getStoreId());
+        store.setMerchantEuid(merchantEuid);
+        this.removeCache(store.getId());
+        return storeService.updateById(store);
+    }
 
     /**
      * 获取待结算店铺列表
@@ -129,7 +131,41 @@ public interface StoreDetailService extends IService<StoreDetail> {
      * @param day 结算日
      * @return 待结算店铺列表
      */
-    List<StoreSettlementDay> getSettlementStore(int day);
+    
+    public List<StoreSettlementDay> getSettlementStore(int day) {
+        return this.baseMapper.getSettlementStore(day);
+    }
+
+    
+    public StoreDeliverGoodsAddressDTO getStoreDeliverGoodsAddressDto() {
+        String storeId = Objects.requireNonNull(UserContext.getCurrentUser().getStoreId());
+        return this.baseMapper.getStoreDeliverGoodsAddressDto(storeId);
+    }
+
+    
+    public StoreDeliverGoodsAddressDTO getStoreDeliverGoodsAddressDto(String id) {
+        StoreDeliverGoodsAddressDTO storeDeliverGoodsAddressDto = this.baseMapper.getStoreDeliverGoodsAddressDto(id);
+        if (storeDeliverGoodsAddressDto == null) {
+            storeDeliverGoodsAddressDto = new StoreDeliverGoodsAddressDTO();
+        }
+        return storeDeliverGoodsAddressDto;
+    }
+
+    
+    public boolean editStoreDeliverGoodsAddressDTO(StoreDeliverGoodsAddressDTO storeDeliverGoodsAddressDto) {
+        String storeId = Objects.requireNonNull(UserContext.getCurrentUser().getStoreId());
+        LambdaUpdateWrapper<StoreDetail> lambdaUpdateWrapper = Wrappers.lambdaUpdate();
+        lambdaUpdateWrapper.set(StoreDetail::getSalesConsignorName, storeDeliverGoodsAddressDto.getSalesConsignorName());
+        lambdaUpdateWrapper.set(StoreDetail::getSalesConsignorMobile, storeDeliverGoodsAddressDto.getSalesConsignorMobile());
+        lambdaUpdateWrapper.set(StoreDetail::getSalesConsignorAddressId, storeDeliverGoodsAddressDto.getSalesConsignorAddressId());
+        lambdaUpdateWrapper.set(StoreDetail::getSalesConsignorAddressPath, storeDeliverGoodsAddressDto.getSalesConsignorAddressPath());
+        lambdaUpdateWrapper.set(StoreDetail::getSalesConsignorDetail, storeDeliverGoodsAddressDto.getSalesConsignorDetail());
+        lambdaUpdateWrapper.eq(StoreDetail::getStoreId, storeId);
+
+
+        this.removeCache(storeId);
+        return this.update(lambdaUpdateWrapper);
+    }
 
     /**
      * 修改店铺的结算日
@@ -137,29 +173,94 @@ public interface StoreDetailService extends IService<StoreDetail> {
      * @param storeId  店铺ID
      * @param dateTime 结算日
      */
-    void updateSettlementDay(String storeId, DateTime dateTime);
+    
+    public void updateSettlementDay(String storeId, DateTime dateTime) {
+        this.removeCache(storeId);
+        this.baseMapper.updateSettlementDay(storeId, dateTime);
+    }
+
+    
+    public StoreBasicInfoVO getStoreBasicInfoDTO(String storeId) {
+        return this.baseMapper.getStoreBasicInfoDTO(storeId);
+    }
+
+    
+    public StoreAfterSaleAddressDTO getStoreAfterSaleAddressDTO() {
+        String storeId = Objects.requireNonNull(UserContext.getCurrentUser()).getStoreId();
+        return this.baseMapper.getStoreAfterSaleAddressDTO(storeId);
+    }
+
+
+    
+    public StoreAfterSaleAddressDTO getStoreAfterSaleAddressDTO(String id) {
+        StoreAfterSaleAddressDTO storeAfterSaleAddressDTO = this.baseMapper.getStoreAfterSaleAddressDTO(id);
+        if (storeAfterSaleAddressDTO == null) {
+            storeAfterSaleAddressDTO = new StoreAfterSaleAddressDTO();
+        }
+        return storeAfterSaleAddressDTO;
+    }
+
+    
+    public boolean editStoreAfterSaleAddressDTO(StoreAfterSaleAddressDTO storeAfterSaleAddressDTO) {
+        String storeId = Objects.requireNonNull(UserContext.getCurrentUser()).getStoreId();
+        LambdaUpdateWrapper<StoreDetail> lambdaUpdateWrapper = Wrappers.lambdaUpdate();
+        lambdaUpdateWrapper.set(StoreDetail::getSalesConsigneeName, storeAfterSaleAddressDTO.getSalesConsigneeName());
+        lambdaUpdateWrapper.set(StoreDetail::getSalesConsigneeAddressId, storeAfterSaleAddressDTO.getSalesConsigneeAddressId());
+        lambdaUpdateWrapper.set(StoreDetail::getSalesConsigneeAddressPath, storeAfterSaleAddressDTO.getSalesConsigneeAddressPath());
+        lambdaUpdateWrapper.set(StoreDetail::getSalesConsigneeDetail, storeAfterSaleAddressDTO.getSalesConsigneeDetail());
+        lambdaUpdateWrapper.set(StoreDetail::getSalesConsigneeMobile, storeAfterSaleAddressDTO.getSalesConsigneeMobile());
+        lambdaUpdateWrapper.eq(StoreDetail::getStoreId, storeId);
+
+        this.removeCache(storeId);
+        return this.update(lambdaUpdateWrapper);
+    }
+
+
+    
+    public boolean updateStockWarning(Integer stockWarning) {
+        String storeId = Objects.requireNonNull(UserContext.getCurrentUser()).getStoreId();
+        LambdaUpdateWrapper<StoreDetail> lambdaUpdateWrapper = Wrappers.lambdaUpdate();
+        lambdaUpdateWrapper.set(StoreDetail::getStockWarning, stockWarning);
+        lambdaUpdateWrapper.eq(StoreDetail::getStoreId, storeId);
+        this.removeCache(storeId);
+        return this.update(lambdaUpdateWrapper);
+    }
+
+    
+    public List<StoreManagementCategoryVO> goodsManagementCategory(String storeId) {
+
+        //获取顶部分类列表
+        List<Category> categoryList = categoryService.firstCategory();
+        //获取店铺信息
+        StoreDetail storeDetail = this.getOne(new LambdaQueryWrapper<StoreDetail>().eq(StoreDetail::getStoreId, storeId));
+        //获取店铺分类
+        String[] storeCategoryList = storeDetail.getGoodsManagementCategory().split(",");
+        List<StoreManagementCategoryVO> list = new ArrayList<>();
+        for (Category category : categoryList) {
+            StoreManagementCategoryVO storeManagementCategoryVO = new StoreManagementCategoryVO(category);
+            for (String storeCategory : storeCategoryList) {
+                if (storeCategory.equals(category.getId())) {
+                    storeManagementCategoryVO.setSelected(true);
+                }
+            }
+            list.add(storeManagementCategoryVO);
+        }
+        return list;
+    }
+
+    
+    public StoreOtherVO getStoreOtherVO(String storeId) {
+        return this.baseMapper.getLicencePhoto(storeId);
+    }
 
 
     /**
-     * 获取当前登录店铺发件地址
+     * 删除缓存
      *
-     * @return 店铺售后发件地址
+     * @param storeId 店铺id
      */
-    StoreDeliverGoodsAddressDTO getStoreDeliverGoodsAddressDto();
+    private void removeCache(String storeId) {
+        cache.remove(CachePrefix.STORE.getPrefix() + storeId);
+    }
 
-    /**
-     * 获取某一个店铺的发货寄件地址信息
-     *
-     * @param id 店铺ID
-     * @return 店铺发件地址
-     */
-    StoreDeliverGoodsAddressDTO getStoreDeliverGoodsAddressDto(String id);
-
-    /**
-     * 修改当前登录店铺发件地址
-     *
-     * @param storeDeliverGoodsAddressDto 店铺发货信息DTO
-     * @return 店铺售后发件地址
-     */
-    boolean editStoreDeliverGoodsAddressDTO(StoreDeliverGoodsAddressDTO storeDeliverGoodsAddressDto);
 }

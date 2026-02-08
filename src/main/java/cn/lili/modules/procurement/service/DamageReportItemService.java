@@ -1,21 +1,27 @@
 package cn.lili.modules.procurement.service;
 
 import cn.lili.modules.procurement.entity.dos.DamageReportItem;
-import com.baomidou.mybatisplus.extension.service.IService;
+import cn.lili.modules.procurement.mapper.DamageReportItemMapper;
+import cn.lili.modules.procurement.service.DamageReportItemService;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 /**
- * 报损单明细业务接口
+ * 报损单明细业务实现
  * 提供按报损单ID查询明细
  * @author Bulbasaur
  * @since 2025-12-18
  */
-public interface DamageReportItemService extends IService<DamageReportItem> {
-    /**
-     * 按报损单ID查询明细列表
-     * @param reportId 报损单ID
-     * @return 报损明细列表
-     */
-    List<DamageReportItem> listByReportId(String reportId);
+@Service
+public class DamageReportItemService extends ServiceImpl<DamageReportItemMapper, DamageReportItem>  {
+    
+    public List<DamageReportItem> listByReportId(String reportId) {
+        LambdaQueryWrapper<DamageReportItem> wrapper = Wrappers.lambdaQuery();
+        wrapper.eq(DamageReportItem::getReportId, reportId);
+        return this.list(wrapper);
+    }
 }

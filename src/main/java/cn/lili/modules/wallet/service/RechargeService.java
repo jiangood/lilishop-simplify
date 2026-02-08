@@ -1,68 +1,135 @@
 package cn.lili.modules.wallet.service;
 
+import cn.hutool.core.date.DateTime;
+import cn.hutool.core.text.CharSequenceUtil;
+import cn.lili.common.enums.ResultCode;
+import cn.lili.common.exception.ServiceException;
+import cn.lili.common.security.AuthUser;
+import cn.lili.common.security.context.UserContext;
+import cn.lili.common.utils.SnowFlake;
 import cn.lili.common.vo.PageVO;
+import cn.lili.modules.order.order.entity.enums.PayStatusEnum;
 import cn.lili.modules.order.trade.entity.vo.RechargeQueryVO;
 import cn.lili.modules.payment.entity.enums.PaymentMethodEnum;
 import cn.lili.modules.wallet.entity.dos.Recharge;
+import cn.lili.modules.wallet.entity.dto.MemberWalletUpdateDTO;
+import cn.lili.modules.wallet.entity.enums.DepositServiceTypeEnum;
+import cn.lili.modules.wallet.mapper.RechargeMapper;
+import cn.lili.modules.wallet.service.MemberWalletService;
+import cn.lili.modules.wallet.service.RechargeService;
+import cn.lili.mybatis.util.PageUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.service.IService;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.stereotype.Service;
 
 import java.util.Date;
+import java.util.Objects;
 
 /**
- * 预存款充值业务层
+ * 预存款业务层实现
  *
  * @author pikachu
  * @since 2020-02-25 14:10:16
  */
-public interface RechargeService extends IService<Recharge> {
+@Service
+public class RechargeService extends ServiceImpl<RechargeMapper, Recharge>  {
 
     /**
-     * 创建充值订单
-     *
-     * @param price 价格
-     * @return 预存款充值记录
+     * 会员预存款
      */
-    Recharge recharge(Double price);
+    @Autowired
+    @Lazy
+    private MemberWalletService memberWalletService;
 
-    /**
-     * 查询充值订单列表
-     *
-     * @param page            分页数据
-     * @param rechargeQueryVO 查询条件
-     * @return
-     */
-    IPage<Recharge> rechargePage(PageVO page, RechargeQueryVO rechargeQueryVO);
+    
+    public Recharge recharge(Double price) {
+
+        if (price == null || price <= 0 || price > 1000000) {
+            throw new ServiceException(ResultCode.RECHARGE_PRICE_ERROR);
+        }
+
+        //获取当前登录的会员
+        AuthUser authUser = UserContext.getCurrentUser();
+        //构建sn
+        String sn = "Y" + SnowFlake.getId();
+        //整合充值订单数据
+        Recharge recharge = new Recharge(sn, authUser.getId(), authUser.getUsername(), price);
+        //添加预存款充值账单
+        this.save(recharge);
+        //返回预存款
+        return recharge;
+    }
+
+    
+    public IPage<Recharge> rechargePage(PageVO page, RechargeQueryVO rechargeQueryVO) {
+        //构建查询条件
+        QueryWrapper<Recharge> queryWrapper = new QueryWrapper<>();
+        //会员名称
+        queryWrapper.like(!CharSequenceUtil.isEmpty(rechargeQueryVO.getMemberName()), "member_name", rechargeQueryVO.getMemberName());
+        //充值订单号
+        queryWrapper.eq(!CharSequenceUtil.isEmpty(rechargeQueryVO.getRechargeSn()), "recharge_sn", rechargeQueryVO.getRechargeSn());
+        //会员id
+        queryWrapper.eq(!CharSequenceUtil.isEmpty(rechargeQueryVO.getMemberId()), "member_id", rechargeQueryVO.getMemberId());
+        //支付时间 开始时间和结束时间
+        if (!CharSequenceUtil.isEmpty(rechargeQueryVO.getStartDate()) && !CharSequenceUtil.isEmpty(rechargeQueryVO.getEndDate())) {
+            Date start = cn.hutool.core.date.DateUtil.parse(rechargeQueryVO.getStartDate());
+            Date end = cn.hutool.core.date.DateUtil.parse(rechargeQueryVO.getEndDate());
+            queryWrapper.between("pay_time", start, end);
+        }
+        queryWrapper.orderByDesc("create_time");
+        //查询返回数据
+        return this.page(PageUtil.initPage(page), queryWrapper);
+    }
+
+    
+    public void paySuccess(String sn, String receivableNo, String paymentMethod) {
+        //根据sn获取支付账单
+        Recharge recharge = this.getOne(new QueryWrapper<Recharge>().eq("recharge_sn", sn));
+        //如果支付账单不为空则进行一下逻辑
+        if (recharge != null && !recharge.getPayStatus().equals(PayStatusEnum.PAID.name())) {
+            //将此账单支付状态更改为已支付
+            recharge.setPayStatus(PayStatusEnum.PAID.name());
+            recharge.setReceivableNo(receivableNo);
+            recharge.setPayTime(new DateTime());
+            recharge.setRechargeWay(paymentMethod);
+            //执行保存操作
+            this.updateById(recharge);
+            //增加预存款余额
+            memberWalletService.increase(new MemberWalletUpdateDTO(recharge.getRechargeMoney(), recharge.getMemberId(), "会员余额充值，充值单号为：" + recharge.getRechargeSn(), DepositServiceTypeEnum.WALLET_RECHARGE.name()));
+        }
+    }
+
+    
+    public Recharge getRecharge(String sn) {
+        Recharge recharge = this.getOne(new QueryWrapper<Recharge>().eq("recharge_sn", sn));
+        if (recharge != null) {
+            return recharge;
+        }
+        throw new ServiceException(ResultCode.ORDER_NOT_EXIST);
+    }
 
 
-    /**
-     * 支付成功
-     *
-     * @param sn            充值订单编号
-     * @param receivableNo  流水no
-     * @param paymentMethod 支付方式
-     */
-    void paySuccess(String sn, String receivableNo, String paymentMethod);
+    
+    public void rechargeOrderCancel(String sn) {
+        Recharge recharge = this.getOne(new QueryWrapper<Recharge>().eq("recharge_sn", sn));
+        if (recharge != null) {
+            recharge.setPayStatus(PayStatusEnum.CANCEL.name());
+            this.updateById(recharge);
+        }
+    }
 
-    /**
-     * 根据充值订单号查询充值信息
-     *
-     * @param sn 充值订单号
-     * @return
-     */
-    Recharge getRecharge(String sn);
-
-    /**
-     * 充值订单取消
-     *
-     * @param sn 充值订单sn
-     */
-    void rechargeOrderCancel(String sn);
-
-    /**
-     * 获取周期内的充值金额
-     *
-     * @return
-     */
-    Double getRecharge(Date[] dates, PaymentMethodEnum paymentMethodEnum);
+    
+    public Double getRecharge(Date[] dates, PaymentMethodEnum paymentMethodEnum) {
+        LambdaQueryWrapper<Recharge> queryWrapper = new LambdaQueryWrapper<Recharge>();
+        queryWrapper.eq(Recharge::getPayStatus, PayStatusEnum.PAID.name());
+        queryWrapper.between(Recharge::getPayTime, dates[0], dates[1]);
+        if(Objects.nonNull(paymentMethodEnum)){
+            queryWrapper.eq(Recharge::getRechargeWay,paymentMethodEnum.name());
+        }
+        return this.baseMapper.getRecharge(queryWrapper);
+    }
 }

@@ -1,22 +1,24 @@
 package cn.lili.modules.message.service;
 
 import cn.lili.modules.message.entity.dos.ShortLink;
-import com.baomidou.mybatisplus.extension.service.IService;
+import cn.lili.modules.message.mapper.ShortLinkMapper;
+import cn.lili.modules.message.service.ShortLinkService;
+import cn.lili.mybatis.util.PageUtil;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 /**
- * 短链接 业务层
+ * 短链接 业务实现
  *
  * @author Chopper
  */
-public interface ShortLinkService extends IService<ShortLink> {
+@Service
+public class ShortLinkService extends ServiceImpl<ShortLinkMapper, ShortLink>  {
 
-    /**
-     * 根据模型，查询返回的集合
-     *
-     * @param shortLink 短链接模型
-     * @return 端链接集合
-     */
-    List<ShortLink> queryShortLinks(ShortLink shortLink);
+    
+    public List<ShortLink> queryShortLinks(ShortLink shortLink) {
+        return this.list(PageUtil.initWrapper(shortLink));
+    }
 }

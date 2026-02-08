@@ -1,44 +1,58 @@
 package cn.lili.modules.order.order.service;
 
 import cn.hutool.core.date.DateTime;
+import cn.hutool.core.text.CharSequenceUtil;
+import cn.lili.common.enums.ResultCode;
+import cn.lili.common.exception.ServiceException;
 import cn.lili.modules.order.order.entity.dos.OrderItem;
 import cn.lili.modules.order.order.entity.dto.OrderItemOperationDTO;
 import cn.lili.modules.order.order.entity.enums.CommentStatusEnum;
 import cn.lili.modules.order.order.entity.enums.OrderComplaintStatusEnum;
 import cn.lili.modules.order.order.entity.enums.OrderItemAfterSaleStatusEnum;
-import com.baomidou.mybatisplus.extension.service.IService;
+import cn.lili.modules.order.order.mapper.OrderItemMapper;
+import cn.lili.modules.order.order.service.OrderItemService;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 /**
- * 子订单业务层
+ * 子订单业务层实现
  *
  * @author Chopper
- * @since 2020/11/17 7:36 下午
+ * @since 2020/11/17 7:38 下午
  */
-public interface OrderItemService extends IService<OrderItem> {
+@Service
+public class OrderItemService extends ServiceImpl<OrderItemMapper, OrderItem>  {
 
-    /**
-     * 更新评论状态
-     *
-     * @param orderItemSn       子订单编号
-     * @param commentStatusEnum 评论状态枚举
-     */
-    void updateCommentStatus(String orderItemSn, CommentStatusEnum commentStatusEnum);
+    
+    public void updateCommentStatus(String orderItemSn, CommentStatusEnum commentStatusEnum) {
+        LambdaUpdateWrapper<OrderItem> lambdaUpdateWrapper = Wrappers.lambdaUpdate();
+        lambdaUpdateWrapper.set(OrderItem::getCommentStatus, commentStatusEnum.name());
+        lambdaUpdateWrapper.eq(OrderItem::getSn, orderItemSn);
+        this.update(lambdaUpdateWrapper);
+    }
 
-    /**
-     * 更新可申请售后状态
-     *
-     * @param orderItemSn                  子订单编号
-     * @param orderItemAfterSaleStatusEnum 售后状态枚举
-     */
-    void updateAfterSaleStatus(String orderItemSn, OrderItemAfterSaleStatusEnum orderItemAfterSaleStatusEnum);
+    
+    public void updateAfterSaleStatus(String orderItemSn, OrderItemAfterSaleStatusEnum orderItemAfterSaleStatusEnum) {
+        LambdaUpdateWrapper<OrderItem> lambdaUpdateWrapper = Wrappers.lambdaUpdate();
+        lambdaUpdateWrapper.set(OrderItem::getAfterSaleStatus, orderItemAfterSaleStatusEnum.name());
+        lambdaUpdateWrapper.eq(OrderItem::getSn, orderItemSn);
+        this.update(lambdaUpdateWrapper);
+    }
 
-    /**
-     * 更新售后状态
-     * @param orderItem
-     */
-    void updateByAfterSale(OrderItem orderItem);
+    
+    public void updateByAfterSale(OrderItem orderItem) {
+        LambdaUpdateWrapper<OrderItem> lambdaUpdateWrapper = new LambdaUpdateWrapper<OrderItem>()
+                .eq(OrderItem::getSn, orderItem.getSn())
+                .set(OrderItem::getIsRefund, orderItem.getIsRefund())
+                .set(OrderItem::getRefundPrice, orderItem.getRefundPrice());
+        this.update(lambdaUpdateWrapper);
+    }
 
     /**
      * 更新订单可投诉状态
@@ -48,34 +62,54 @@ public interface OrderItemService extends IService<OrderItem> {
      * @param complainId         订单交易投诉ID
      * @param complainStatusEnum 修改状态
      */
-    void updateOrderItemsComplainStatus(String orderSn, String skuId, String complainId, OrderComplaintStatusEnum complainStatusEnum);
+    
+    public void updateOrderItemsComplainStatus(String orderSn, String skuId, String complainId, OrderComplaintStatusEnum complainStatusEnum) {
+        LambdaQueryWrapper<OrderItem> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(OrderItem::getOrderSn, orderSn).eq(OrderItem::getSkuId, skuId);
+        OrderItem orderItem = getOne(queryWrapper);
+        if (orderItem == null) {
+            throw new ServiceException(ResultCode.ORDER_ITEM_NOT_EXIST);
+        }
+        orderItem.setComplainId(complainId);
+        orderItem.setComplainStatus(complainStatusEnum.name());
+        updateById(orderItem);
+    }
 
-    /**
-     * 根据子订单编号获取子订单信息
-     *
-     * @param sn 子订单编号
-     * @return 子订单
-     */
-    OrderItem getBySn(String sn);
+    
+    public OrderItem getBySn(String sn) {
+        LambdaQueryWrapper<OrderItem> lambdaQueryWrapper = Wrappers.lambdaQuery();
+        lambdaQueryWrapper.eq(OrderItem::getSn, sn);
+        return this.getOne(lambdaQueryWrapper);
+    }
 
-    /**
-     * 根据订单编号获取子订单列表
-     *
-     * @param orderSn 订单编号
-     * @return 子订单列表
-     */
-    List<OrderItem> getByOrderSn(String orderSn);
+    
+    public List<OrderItem> getByOrderSn(String orderSn) {
+        LambdaQueryWrapper<OrderItem> lambdaQueryWrapper = Wrappers.lambdaQuery();
+        lambdaQueryWrapper.eq(OrderItem::getOrderSn, orderSn);
+        return this.list(lambdaQueryWrapper);
+    }
 
-    /**
-     * 子订单查询
-     *
-     * @param orderSn 订单编号
-     * @param skuId   skuid
-     * @return 子订单
-     */
-    OrderItem getByOrderSnAndSkuId(String orderSn, String skuId);
+    
+    public OrderItem getByOrderSnAndSkuId(String orderSn, String skuId) {
+        return this.getOne(new LambdaQueryWrapper<OrderItem>()
+                .eq(OrderItem::getOrderSn, orderSn)
+                .eq(OrderItem::getSkuId, skuId));
+    }
 
-    List<OrderItem> waitOperationOrderItem(OrderItemOperationDTO orderItemOperationDTO);
+    
+    public List<OrderItem> waitOperationOrderItem(OrderItemOperationDTO dto) {
+        QueryWrapper queryWrapper = new QueryWrapper();
+        queryWrapper.le("o.complete_time", dto.getReceiveTime());
+        queryWrapper.eq(CharSequenceUtil.isNotEmpty(dto.getCommentStatus()), "oi.comment_status", dto.getCommentStatus());
+        queryWrapper.eq(CharSequenceUtil.isNotEmpty(dto.getAfterSaleStatus()), "oi.after_sale_status", dto.getAfterSaleStatus());
+        queryWrapper.eq(CharSequenceUtil.isNotEmpty(dto.getComplainStatus()), "oi.complain_status", dto.getComplainStatus());
+        return this.baseMapper.waitOperationOrderItem(queryWrapper);
+    }
 
-    void expiredAfterSaleStatus(DateTime expiredTime);
+
+    
+    public void expiredAfterSaleStatus(DateTime expiredTime) {
+        this.baseMapper.expiredAfterSaleStatus(expiredTime);
+        this.baseMapper.expiredAfterSaleStatusExecuteByAfterSale(expiredTime);
+    }
 }

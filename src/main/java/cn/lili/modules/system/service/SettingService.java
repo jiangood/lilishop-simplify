@@ -1,35 +1,27 @@
 package cn.lili.modules.system.service;
 
 import cn.lili.modules.system.entity.dos.Setting;
-import com.baomidou.mybatisplus.extension.service.IService;
-import org.springframework.cache.annotation.CacheConfig;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
+import cn.lili.modules.system.mapper.SettingMapper;
+import cn.lili.modules.system.service.SettingService;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.stereotype.Service;
 
 /**
- * 配置业务层
+ * 配置业务层实现
  *
  * @author Chopper
- * @since 2020/11/17 3:46 下午
+ * @since 2020/11/17 3:52 下午
  */
-@CacheConfig(cacheNames = "{setting}")
-public interface SettingService extends IService<Setting> {
+@Service
+public class SettingService extends ServiceImpl<SettingMapper, Setting>  {
 
-    /**
-     * 通过key获取
-     *
-     * @param key
-     * @return
-     */
-    @Cacheable(key = "#key")
-    Setting get(String key);
+    
+    public Setting get(String key) {
+        return this.getById(key);
+    }
 
-    /**
-     * 修改
-     *
-     * @param setting
-     * @return
-     */
-    @CacheEvict(key = "#setting.id")
-    boolean saveUpdate(Setting setting);
+    
+    public boolean saveUpdate(Setting setting) {
+        return this.saveOrUpdate(setting);
+    }
 }

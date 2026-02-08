@@ -1,27 +1,78 @@
 package cn.lili.modules.goods.service;
 
+import cn.hutool.core.text.CharSequenceUtil;
+import cn.lili.cache.Cache;
+import cn.lili.cache.CachePrefix;
+import cn.lili.common.enums.ResultCode;
+import cn.lili.common.exception.ServiceException;
+import cn.lili.common.security.AuthUser;
+import cn.lili.common.security.context.UserContext;
 import cn.lili.modules.goods.entity.dos.StoreGoodsLabel;
 import cn.lili.modules.goods.entity.vos.StoreGoodsLabelVO;
-import com.baomidou.mybatisplus.extension.service.IService;
+import cn.lili.modules.goods.mapper.StoreGoodsLabelMapper;
+import cn.lili.modules.goods.service.StoreGoodsLabelService;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
 /**
- * 店铺商品分类业务层
+ * 店铺商品分类业务层实现
  *
  * @author Bulbasaur
- * @since 2020-03-07 09:24:33
+ * @since 2020-03-07 16:18:56
  */
-public interface StoreGoodsLabelService extends IService<StoreGoodsLabel> {
+@Service
+public class StoreGoodsLabelService extends ServiceImpl<StoreGoodsLabelMapper, StoreGoodsLabel>  {
 
     /**
-     * 根据商家ID获取店铺分类列表
-     *
-     * @param storeId 商家ID
-     * @return 店铺分类列表
+     * 缓存
      */
-    List<StoreGoodsLabelVO> listByStoreId(String storeId);
+    @Autowired
+    private Cache cache;
+
+    
+    public List<StoreGoodsLabelVO> listByStoreId(String storeId) {
+
+        //从缓存中获取店铺分类
+        if (cache.hasKey(CachePrefix.STORE_CATEGORY.getPrefix() + storeId)) {
+            return (List<StoreGoodsLabelVO>) cache.get(CachePrefix.STORE_CATEGORY.getPrefix() + storeId);
+        }
+
+        List<StoreGoodsLabel> list = list(storeId);
+        List<StoreGoodsLabelVO> storeGoodsLabelVOList = new ArrayList<>();
+
+        //循环列表判断是否为顶级，如果为顶级获取下级数据
+        list.stream()
+                .filter(storeGoodsLabel -> storeGoodsLabel.getLevel() == 0)
+                .forEach(storeGoodsLabel -> {
+                    StoreGoodsLabelVO storeGoodsLabelVO = new StoreGoodsLabelVO(storeGoodsLabel.getId(), storeGoodsLabel.getLabelName(), storeGoodsLabel.getLevel(), storeGoodsLabel.getSortOrder());
+                    List<StoreGoodsLabelVO> storeGoodsLabelVOChildList = new ArrayList<>();
+                    list.stream()
+                            .filter(label -> label.getParentId() != null && label.getParentId().equals(storeGoodsLabel.getId()))
+                            .forEach(storeGoodsLabelChild -> storeGoodsLabelVOChildList.add(new StoreGoodsLabelVO(storeGoodsLabelChild.getId(), storeGoodsLabelChild.getLabelName(), storeGoodsLabelChild.getLevel(), storeGoodsLabelChild.getSortOrder())));
+                    storeGoodsLabelVOChildList.sort(Comparator.comparing(StoreGoodsLabelVO::getSortOrder));
+                    storeGoodsLabelVO.setChildren(storeGoodsLabelVOChildList);
+                    storeGoodsLabelVOList.add(storeGoodsLabelVO);
+                });
+
+        //调整店铺分类排序
+        storeGoodsLabelVOList.sort(Comparator.comparing(StoreGoodsLabelVO::getSortOrder));
+
+        if (!storeGoodsLabelVOList.isEmpty()) {
+            cache.put(CachePrefix.CATEGORY.getPrefix() + storeId, storeGoodsLabelVOList);
+        }
+        return storeGoodsLabelVOList;
+    }
 
     /**
      * 根据分类id集合获取所有店铺分类根据层级排序
@@ -29,37 +80,83 @@ public interface StoreGoodsLabelService extends IService<StoreGoodsLabel> {
      * @param ids 商家ID
      * @return 店铺分类列表
      */
-    List<StoreGoodsLabel> listByStoreIds(List<String> ids);
+    
+    public List<StoreGoodsLabel> listByStoreIds(List<String> ids) {
+        return this.list(new LambdaQueryWrapper<StoreGoodsLabel>().in(StoreGoodsLabel::getId, ids).orderByAsc(StoreGoodsLabel::getLevel));
+    }
+
+    
+    public List<Map<String, Object>> listMapsByStoreIds(List<String> ids, String columns) {
+        QueryWrapper<StoreGoodsLabel> queryWrapper = new QueryWrapper<StoreGoodsLabel>().in("id", ids).orderByAsc("level");
+        queryWrapper.select(columns);
+        return this.listMaps(queryWrapper);
+    }
+
+    
+    @Transactional(rollbackFor = Exception.class)
+    public StoreGoodsLabel addStoreGoodsLabel(StoreGoodsLabel storeGoodsLabel) {
+        //获取当前登录商家账号
+        AuthUser tokenUser = UserContext.getCurrentUser();
+        if (tokenUser == null || CharSequenceUtil.isEmpty(tokenUser.getStoreId())) {
+            throw new ServiceException(ResultCode.USER_NOT_LOGIN);
+        }
+        storeGoodsLabel.setStoreId(tokenUser.getStoreId());
+        //保存店铺分类
+        this.save(storeGoodsLabel);
+        //清除缓存
+        removeCache(storeGoodsLabel.getStoreId());
+        return storeGoodsLabel;
+    }
+
+    
+    @Transactional(rollbackFor = Exception.class)
+    public StoreGoodsLabel editStoreGoodsLabel(StoreGoodsLabel storeGoodsLabel) {
+        //修改当前店铺的商品分类
+        AuthUser tokenUser = UserContext.getCurrentUser();
+        if (tokenUser == null || CharSequenceUtil.isEmpty(tokenUser.getStoreId())) {
+            throw new ServiceException(ResultCode.USER_NOT_LOGIN);
+        }
+        LambdaUpdateWrapper<StoreGoodsLabel> lambdaUpdateWrapper = Wrappers.lambdaUpdate();
+        lambdaUpdateWrapper.eq(StoreGoodsLabel::getStoreId, tokenUser.getStoreId());
+        lambdaUpdateWrapper.eq(StoreGoodsLabel::getId, storeGoodsLabel.getId());
+        //修改店铺分类
+        this.update(storeGoodsLabel, lambdaUpdateWrapper);
+        //清除缓存
+        removeCache(storeGoodsLabel.getStoreId());
+        return storeGoodsLabel;
+    }
+
+    
+    public void removeStoreGoodsLabel(String storeLabelId) {
+
+        AuthUser tokenUser = UserContext.getCurrentUser();
+        if (tokenUser == null || CharSequenceUtil.isEmpty(tokenUser.getStoreId())) {
+            throw new ServiceException(ResultCode.USER_NOT_LOGIN);
+        }
+        //删除店铺分类
+        this.removeById(storeLabelId);
+
+        //清除缓存
+        removeCache(tokenUser.getStoreId());
+    }
 
     /**
-     * 根据分类id集合获取所有店铺分类根据层级排序
+     * 获取店铺商品分类列表
      *
-     * @param ids 商家ID
-     * @return 店铺分类列表
+     * @param storeId 店铺ID
+     * @return 店铺商品分类列表
      */
-    List<Map<String, Object>> listMapsByStoreIds(List<String> ids, String columns);
+    private List<StoreGoodsLabel> list(String storeId) {
+        LambdaQueryWrapper<StoreGoodsLabel> queryWrapper = Wrappers.lambdaQuery();
+        queryWrapper.eq(StoreGoodsLabel::getStoreId, storeId);
+        queryWrapper.orderByDesc(StoreGoodsLabel::getSortOrder);
+        return this.baseMapper.selectList(queryWrapper);
+    }
 
     /**
-     * 添加商品分类
-     *
-     * @param storeGoodsLabel 店铺商品分类
-     * @return 店铺商品分类
+     * 清除缓存
      */
-    StoreGoodsLabel addStoreGoodsLabel(StoreGoodsLabel storeGoodsLabel);
-
-    /**
-     * 修改商品分类
-     *
-     * @param storeGoodsLabel 店铺商品分类
-     * @return 店铺商品分类
-     */
-    StoreGoodsLabel editStoreGoodsLabel(StoreGoodsLabel storeGoodsLabel);
-
-    /**
-     * 删除商品分类
-     *
-     * @param storeLabelId 店铺 分类 ID
-     */
-    void removeStoreGoodsLabel(String storeLabelId);
-
+    private void removeCache(String storeId) {
+        cache.remove(CachePrefix.STORE_CATEGORY.getPrefix() + storeId);
+    }
 }

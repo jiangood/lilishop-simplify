@@ -1,37 +1,74 @@
 package cn.lili.modules.statistics.service;
 
+import cn.hutool.core.date.DateTime;
+import cn.hutool.core.date.DateUtil;
+import cn.hutool.core.text.CharSequenceUtil;
+import cn.lili.common.security.AuthUser;
+import cn.lili.common.security.context.UserContext;
+import cn.lili.common.security.enums.UserEnums;
 import cn.lili.modules.goods.entity.dos.Goods;
 import cn.lili.modules.goods.entity.enums.GoodsAuthEnum;
 import cn.lili.modules.goods.entity.enums.GoodsStatusEnum;
-import com.baomidou.mybatisplus.extension.service.IService;
+import cn.lili.modules.goods.service.GoodsSkuService;
+import cn.lili.modules.statistics.mapper.GoodsStatisticsMapper;
+import cn.lili.modules.statistics.service.GoodsStatisticsService;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.Objects;
 
 /**
- * 商品统计业务层
+ * 商品统计业务层实现
  *
  * @author Bulbasaur
- * @since 2020/12/9 11:06
+ * @since 2020/12/9 11:30
  */
-public interface GoodsStatisticsService extends IService<Goods> {
+@Service
+public class GoodsStatisticsService extends ServiceImpl<GoodsStatisticsMapper, Goods>  {
 
-    /**
-     * 获取所有的已上架的商品数量
-     *
-     * @param goodsStatusEnum 商品状态枚举
-     * @param goodsAuthEnum   商品审核枚举
-     * @return 所有的已上架的商品数量
-     */
-    long goodsNum(GoodsStatusEnum goodsStatusEnum, GoodsAuthEnum goodsAuthEnum);
-    /**
-     * 获取今天的已上架的商品数量
-     *
-     * @return 今天的已上架的商品数量
-     */
-    long todayUpperNum();
+    @Autowired
+    private GoodsSkuService goodsSkuService;
 
-    /**
-     * 预警库存数
-     * @return
-     */
-    long alertQuantityNum();
+    
+    public long goodsNum(GoodsStatusEnum goodsStatusEnum, GoodsAuthEnum goodsAuthEnum) {
+        LambdaQueryWrapper<Goods> queryWrapper = Wrappers.lambdaQuery();
 
+        queryWrapper.eq(Goods::getDeleteFlag, false);
+
+        if (goodsStatusEnum != null) {
+            queryWrapper.eq(Goods::getMarketEnable, goodsStatusEnum.name());
+        }
+        if (goodsAuthEnum != null) {
+            queryWrapper.eq(Goods::getAuthFlag, goodsAuthEnum.name());
+        }
+        AuthUser currentUser = Objects.requireNonNull(UserContext.getCurrentUser());
+        queryWrapper.eq(CharSequenceUtil.equals(currentUser.getRole().name(), UserEnums.STORE.name()),
+                Goods::getStoreId, currentUser.getStoreId());
+
+        return this.count(queryWrapper);
+    }
+
+    
+    public long todayUpperNum() {
+        LambdaQueryWrapper<Goods> queryWrapper = Wrappers.lambdaQuery();
+        queryWrapper.eq(Goods::getMarketEnable, GoodsStatusEnum.UPPER.name());
+        queryWrapper.ge(Goods::getCreateTime, DateUtil.beginOfDay(new DateTime()));
+        return this.count(queryWrapper);
+    }
+
+    
+    public long alertQuantityNum() {
+        QueryWrapper queryWrapper = new QueryWrapper();
+        AuthUser currentUser = Objects.requireNonNull(UserContext.getCurrentUser());
+        queryWrapper.eq(CharSequenceUtil.equals(currentUser.getRole().name(), UserEnums.STORE.name()),
+                "store_id", currentUser.getStoreId());
+        queryWrapper.eq("market_enable",GoodsStatusEnum.UPPER.name());
+        queryWrapper.apply("quantity < alert_quantity");
+        queryWrapper.gt("alert_quantity",0);
+        return goodsSkuService.count(queryWrapper);
+    }
 }

@@ -1,28 +1,56 @@
 package cn.lili.modules.payment.service;
 
+import cn.lili.modules.payment.kit.CashierSupport;
 import cn.lili.modules.payment.kit.dto.PaymentSuccessParams;
+import cn.lili.modules.payment.kit.params.CashierExecute;
+import cn.lili.modules.payment.service.PaymentService;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 /**
- * 支付日志 业务层
+ * 支付日志 业务实现
  *
  * @author Chopper
  * @since 2020-12-19 09:25
  */
-public interface PaymentService {
+@Slf4j
+@Service
+public class PaymentService  {
 
-    /**
-     * 支付成功通知
-     *
-     * @param paymentSuccessParams 支付成功回调参数
-     */
-    void success(PaymentSuccessParams paymentSuccessParams);
+    @Autowired
+    private List<CashierExecute> cashierExecutes;
+    @Autowired
+    private CashierSupport cashierSupport;
 
+    
+    public void success(PaymentSuccessParams paymentSuccessParams) {
 
-    /**
-     * 平台支付成功
-     *
-     * @param paymentSuccessParams 支付成功回调参数
-     */
-    void adminPaySuccess(PaymentSuccessParams paymentSuccessParams);
+        //支付状态
+        boolean paymentResult = cashierSupport.paymentResult(paymentSuccessParams.getPayParam());
 
+        //已支付则返回
+        if (paymentResult) {
+            log.warn("收银台重复收款，流水号：{}", paymentSuccessParams.getReceivableNo());
+            return;
+        }
+
+        log.debug("支付成功，第三方流水：{}", paymentSuccessParams.getReceivableNo());
+        //支付结果处理
+        for (CashierExecute cashierExecute : cashierExecutes) {
+            cashierExecute.paymentSuccess(paymentSuccessParams);
+        }
+    }
+
+    
+    public void adminPaySuccess(PaymentSuccessParams paymentSuccessParams) {
+
+        log.debug("支付状态修改成功->银行转账");
+        //支付结果处理
+        for (CashierExecute cashierExecute : cashierExecutes) {
+            cashierExecute.paymentSuccess(paymentSuccessParams);
+        }
+    }
 }

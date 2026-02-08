@@ -1,51 +1,161 @@
 package cn.lili.modules.procurement.service;
 
+import cn.hutool.core.convert.Convert;
+import cn.hutool.core.util.NumberUtil;
+import cn.lili.common.enums.ResultCode;
+import cn.lili.common.exception.ServiceException;
+import cn.lili.common.security.AuthUser;
+import cn.lili.common.security.context.UserContext;
+import cn.lili.common.security.OperationalJudgment;
+import cn.lili.common.utils.SnowFlake;
+import cn.lili.modules.goods.entity.dto.GoodsSkuStockDTO;
+import cn.lili.modules.goods.entity.enums.GoodsStockTypeEnum;
+import cn.lili.modules.goods.entity.dos.GoodsSku;
+import cn.lili.modules.goods.service.GoodsSkuService;
 import cn.lili.modules.procurement.entity.dos.DamageReport;
+import cn.lili.modules.procurement.entity.dos.DamageReportItem;
 import cn.lili.modules.procurement.entity.dto.DamageReportCreateDTO;
-import com.baomidou.mybatisplus.extension.service.IService;
+import cn.lili.modules.procurement.entity.dto.DamageReportItemDTO;
+import cn.lili.modules.procurement.entity.enums.DamageReportStatusEnum;
+import cn.lili.modules.procurement.mapper.DamageReportMapper;
+import cn.lili.modules.procurement.service.DamageReportItemService;
+import cn.lili.modules.procurement.service.DamageReportService;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Objects;
 
 /**
- * 报损单业务接口
- * 定义报损单的生命周期操作
+ * 报损单业务实现
+ * 实现报损单生命周期操作及库存扣减
  * @author Bulbasaur
  * @since 2025-12-18
  */
-public interface DamageReportService extends IService<DamageReport> {
-    /**
-     * 创建报损单
-     * @param dto 报损单创建参数
-     * @return 创建后的报损单
-     */
-    DamageReport create(DamageReportCreateDTO dto);
-    /**
-     * 提交报损单
-     * @param id 报损单ID
-     * @return 提交后的报损单
-     */
-    DamageReport submit(String id);
-    /**
-     * 审批通过报损单
-     * @param id 报损单ID
-     * @return 审批通过后的报损单
-     */
-    DamageReport approve(String id);
-    /**
-     * 审批拒绝报损单
-     * @param id 报损单ID
-     * @param remark 拒绝备注
-     * @return 审批拒绝后的报损单
-     */
-    DamageReport reject(String id, String remark);
-    /**
-     * 撤销报损单
-     * @param id 报损单ID
-     * @return 撤销后的报损单
-     */
-    DamageReport cancel(String id);
-    /**
-     * 完成报损单
-     * @param id 报损单ID
-     * @return 完成后的报损单
-     */
-    DamageReport complete(String id);
+@Service
+public class DamageReportService extends ServiceImpl<DamageReportMapper, DamageReport>  {
+
+    @Autowired
+    private DamageReportItemService damageReportItemService;
+    @Autowired
+    private GoodsSkuService goodsSkuService;
+
+    
+    @Transactional(rollbackFor = Exception.class)
+    public DamageReport create(DamageReportCreateDTO dto) {
+        AuthUser currentUser = Objects.requireNonNull(UserContext.getCurrentUser());
+        DamageReport report = new DamageReport();
+        report.setSn(SnowFlake.createStr("DR"));
+        report.setStoreId(currentUser.getStoreId());
+        report.setStatus(DamageReportStatusEnum.DRAFT.name());
+        report.setDamageDate(dto.getDamageDate() != null ? dto.getDamageDate() : new Date());
+        report.setDamageReasonId(dto.getDamageReasonId());
+        report.setRemark(dto.getRemark());
+        report.setEvidence(dto.getEvidence());
+        int totalQty = 0;
+        double totalAmount = 0D;
+        this.save(report);
+        List<DamageReportItem> items = new ArrayList<>();
+        if (dto.getItems() != null) {
+            for (DamageReportItemDTO it : dto.getItems()) {
+                DamageReportItem item = new DamageReportItem();
+                item.setReportId(report.getId());
+                item.setGoodsId(it.getGoodsId());
+                item.setSkuId(it.getSkuId());
+                item.setQuantity(it.getQuantity());
+                item.setUnitPrice(it.getUnitPrice());
+                double amount = NumberUtil.mul(Convert.toDouble(it.getUnitPrice()), Convert.toDouble(it.getQuantity()));
+                item.setAmount(amount);
+                totalQty += Convert.toInt(it.getQuantity());
+                totalAmount = NumberUtil.add(totalAmount, amount);
+                items.add(item);
+            }
+            damageReportItemService.saveBatch(items);
+        }
+        report.setTotalQuantity(totalQty);
+        report.setTotalAmount(totalAmount);
+        this.updateById(report);
+        return report;
+    }
+
+    
+    @Transactional(rollbackFor = Exception.class)
+    public DamageReport submit(String id) {
+        DamageReport report = OperationalJudgment.judgment(this.getById(id));
+        if (!DamageReportStatusEnum.DRAFT.name().equals(report.getStatus())) {
+            throw new ServiceException(ResultCode.PARAMS_ERROR);
+        }
+        report.setStatus(DamageReportStatusEnum.SUBMITTED.name());
+        this.updateById(report);
+        return report;
+    }
+
+    
+    @Transactional(rollbackFor = Exception.class)
+    public DamageReport approve(String id) {
+        DamageReport report = OperationalJudgment.judgment(this.getById(id));
+        if (!DamageReportStatusEnum.SUBMITTED.name().equals(report.getStatus())) {
+            throw new ServiceException(ResultCode.PARAMS_ERROR);
+        }
+        report.setStatus(DamageReportStatusEnum.APPROVED.name());
+        this.updateById(report);
+        return report;
+    }
+
+    
+    @Transactional(rollbackFor = Exception.class)
+    public DamageReport reject(String id, String remark) {
+        DamageReport report = OperationalJudgment.judgment(this.getById(id));
+        if (!DamageReportStatusEnum.SUBMITTED.name().equals(report.getStatus())) {
+            throw new ServiceException(ResultCode.PARAMS_ERROR);
+        }
+        report.setRemark(remark);
+        report.setStatus(DamageReportStatusEnum.REJECTED.name());
+        this.updateById(report);
+        return report;
+    }
+
+    
+    @Transactional(rollbackFor = Exception.class)
+    public DamageReport cancel(String id) {
+        DamageReport report = OperationalJudgment.judgment(this.getById(id));
+        if (DamageReportStatusEnum.COMPLETED.name().equals(report.getStatus())) {
+            throw new ServiceException(ResultCode.PARAMS_ERROR);
+        }
+        report.setStatus(DamageReportStatusEnum.CANCELLED.name());
+        this.updateById(report);
+        return report;
+    }
+
+    
+    @Transactional(rollbackFor = Exception.class)
+    public DamageReport complete(String id) {
+        DamageReport report = OperationalJudgment.judgment(this.getById(id));
+        if (!DamageReportStatusEnum.APPROVED.name().equals(report.getStatus())) {
+            throw new ServiceException(ResultCode.PARAMS_ERROR);
+        }
+        List<DamageReportItem> items = damageReportItemService.listByReportId(report.getId());
+        List<GoodsSkuStockDTO> stockDTOS = new ArrayList<>();
+        for (DamageReportItem item : items) {
+            Integer currentStock = goodsSkuService.getStock(item.getSkuId());
+            if (currentStock == null || currentStock < item.getQuantity()) {
+                throw new ServiceException(ResultCode.GOODS_SKU_QUANTITY_NOT_ENOUGH);
+            }
+            GoodsSku goodsSku = goodsSkuService.getGoodsSkuByIdFromCache(item.getSkuId());
+            GoodsSkuStockDTO dto = new GoodsSkuStockDTO();
+            dto.setGoodsId(goodsSku.getGoodsId());
+            dto.setSkuId(item.getSkuId());
+            dto.setQuantity(item.getQuantity());
+            dto.setType(GoodsStockTypeEnum.SUB.name());
+            stockDTOS.add(dto);
+        }
+        goodsSkuService.updateStocksByType(stockDTOS);
+        report.setStatus(DamageReportStatusEnum.COMPLETED.name());
+        this.updateById(report);
+        return report;
+    }
 }

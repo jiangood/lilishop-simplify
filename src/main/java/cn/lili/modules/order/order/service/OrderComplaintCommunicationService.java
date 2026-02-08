@@ -1,36 +1,32 @@
 package cn.lili.modules.order.order.service;
 
+import cn.lili.mybatis.util.PageUtil;
 import cn.lili.common.vo.PageVO;
 import cn.lili.modules.order.order.entity.dos.OrderComplaintCommunication;
 import cn.lili.modules.order.order.entity.vo.OrderComplaintCommunicationSearchParams;
 import cn.lili.modules.order.order.entity.vo.OrderComplaintCommunicationVO;
+import cn.lili.modules.order.order.mapper.OrderComplainCommunicationMapper;
+import cn.lili.modules.order.order.service.OrderComplaintCommunicationService;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.service.IService;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.stereotype.Service;
 
 /**
- * 订单投诉通信业务层
+ * 交易投诉通信业务层实现
  *
  * @author paulG
  * @since 2020/12/5
  **/
-public interface OrderComplaintCommunicationService extends IService<OrderComplaintCommunication> {
+@Service
+public class OrderComplaintCommunicationService extends ServiceImpl<OrderComplainCommunicationMapper, OrderComplaintCommunication>  {
 
-    /**
-     * 添加订单投诉通信
-     *
-     * @param communicationVO 投诉通信VO
-     * @return 状态
-     */
-    boolean addCommunication(OrderComplaintCommunicationVO communicationVO);
+    
+    public boolean addCommunication(OrderComplaintCommunicationVO communicationVO) {
+        return this.save(communicationVO);
+    }
 
-    /**
-     * 获取通信记录
-     *
-     * @param searchParams 参数
-     * @param pageVO       分页
-     * @return
-     */
-    IPage<OrderComplaintCommunication> getCommunication(OrderComplaintCommunicationSearchParams searchParams, PageVO pageVO);
-
-
+    
+    public IPage<OrderComplaintCommunication> getCommunication(OrderComplaintCommunicationSearchParams searchParams, PageVO pageVO) {
+        return this.page(PageUtil.initPage(pageVO), searchParams.lambdaQueryWrapper());
+    }
 }

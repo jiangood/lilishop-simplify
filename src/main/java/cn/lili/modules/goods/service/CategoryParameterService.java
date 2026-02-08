@@ -1,54 +1,57 @@
 package cn.lili.modules.goods.service;
 
 import cn.lili.modules.goods.entity.dos.CategoryParameter;
-import com.baomidou.mybatisplus.extension.service.IService;
+import cn.lili.modules.goods.mapper.CategoryParameterMapper;
+import cn.lili.modules.goods.service.CategoryParameterService;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 参数关联分类 业务层
+ * 分类参数业务层实现
  *
  * @author Bulbasaur
- * @since 2025-12-21
+ * @since 2020/12/10 10:05 上午
  */
-public interface CategoryParameterService extends IService<CategoryParameter> {
+@Service
+public class CategoryParameterService extends ServiceImpl<CategoryParameterMapper, CategoryParameter>  {
 
-    /**
-     * 根据分类id查询参数信息
-     *
-     * @param categoryId 分类id
-     * @return 分类参数关联信息列表
-     */
-    List<CategoryParameter> getCategoryParamList(String categoryId);
+    
+    public List<CategoryParameter> getCategoryParamList(String categoryId) {
+        return this.list(new LambdaQueryWrapper<CategoryParameter>().eq(CategoryParameter::getCategoryId, categoryId));
+    }
 
-    /**
-     * 根据参数ID查询参数信息
-     *
-     * @param parameterId 参数ID
-     * @return 分类参数关联信息列表
-     */
-    List<CategoryParameter> getCategoryParamListByParameterId(String parameterId);
+    
+    public List<CategoryParameter> getCategoryParamListByParameterId(String parameterId) {
+        return this.list(new LambdaQueryWrapper<CategoryParameter>().eq(CategoryParameter::getParameterId, parameterId));
+    }
 
-    /**
-     * 通过分类ID删除关联参数
-     *
-     * @param categoryId 分类ID
-     */
-    void deleteByCategoryId(String categoryId);
+    
+    public void deleteByCategoryId(String categoryId) {
+        this.baseMapper.delete(new LambdaUpdateWrapper<CategoryParameter>().eq(CategoryParameter::getCategoryId, categoryId));
+    }
 
-    /**
-     * 通过参数ID删除关联参数
-     *
-     * @param parameterId 参数ID
-     */
-    void deleteByParameterId(String parameterId);
+    
+    public void deleteByParameterId(String parameterId) {
+        this.baseMapper.delete(new LambdaUpdateWrapper<CategoryParameter>().eq(CategoryParameter::getParameterId, parameterId));
+    }
 
-    /**
-     * 保存参数分类关系
-     *
-     * @param categoryIds 分类ids
-     * @param parameterId 参数id
-     */
-    void saveCategoryParameterList(String parameterId, List<String> categoryIds);
+    
+    @Transactional(rollbackFor = Exception.class)
+    public void saveCategoryParameterList(String parameterId, List<String> categoryIds) {
+        this.deleteByParameterId(parameterId);
+        if (categoryIds != null && !categoryIds.isEmpty()) {
+            List<CategoryParameter> relations = new ArrayList<>();
+            for (String categoryId : categoryIds) {
+                relations.add(new CategoryParameter(categoryId, parameterId));
+            }
+            this.saveBatch(relations);
+        }
+    }
 }
 

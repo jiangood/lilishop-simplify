@@ -1,15 +1,18 @@
 package cn.lili.modules.member.service;
 
 import cn.lili.modules.member.entity.dos.MemberGrade;
-import com.baomidou.mybatisplus.extension.service.IService;
+import cn.lili.modules.member.mapper.MemberGradeMapper;
+import cn.lili.modules.member.service.MemberGradeService;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.stereotype.Service;
 
 /**
- * 会员等级业务层
- * @author Bulbasaur
- * @since 2021/5/14 5:57 下午
+ * 会员等级业务层实现
  *
+ * @author Bulbasaur
+ * @since 2021/5/14 5:58 下午
  */
-public interface MemberGradeService extends IService<MemberGrade> {
-
+@Service
+public class MemberGradeService extends ServiceImpl<MemberGradeMapper, MemberGrade>  {
 
 }
