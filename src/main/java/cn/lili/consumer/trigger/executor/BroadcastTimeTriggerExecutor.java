@@ -1,7 +1,7 @@
 package cn.lili.consumer.trigger.executor;
 
 import cn.hutool.json.JSONUtil;
-import cn.lili.consumer.trigger.TimeTriggerExecutor;
+import cn.lili.framework.Task;
 import cn.lili.modules.goods.service.StudioService;
 import cn.lili.trigger.message.BroadcastMessage;
 import cn.lili.trigger.model.TimeExecuteConstant;
@@ -17,14 +17,14 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component(TimeExecuteConstant.BROADCAST_EXECUTOR)
-public class BroadcastTimeTriggerExecutor implements TimeTriggerExecutor {
+public class BroadcastTimeTriggerExecutor implements Task {
 
 
     @Autowired
     private StudioService studioService;
 
     @Override
-    public void execute(Object object) {
+    public void execute(String object) {
         //直播间订单消息
         BroadcastMessage broadcastMessage = JSONUtil.toBean(JSONUtil.parseObj(object), BroadcastMessage.class);
         if (broadcastMessage != null && broadcastMessage.getStudioId() != null) {

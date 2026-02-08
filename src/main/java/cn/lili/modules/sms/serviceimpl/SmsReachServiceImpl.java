@@ -1,6 +1,5 @@
 package cn.lili.modules.sms.serviceimpl;
 
-import cn.hutool.json.JSONUtil;
 import cn.lili.common.message.Topic;
 import cn.lili.common.utils.BeanUtil;
 import cn.lili.modules.sms.entity.dos.SmsReach;
@@ -9,7 +8,7 @@ import cn.lili.modules.sms.mapper.SmsReachMapper;
 import cn.lili.modules.sms.service.SmsReachService;
 import cn.lili.rocketmq.tags.OtherTagsEnum;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import cn.lili.common.message.queue.template.MessageQueueTemplate;
+import cn.lili.framework.queue.MessageQueueTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

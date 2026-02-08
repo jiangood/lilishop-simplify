@@ -1,11 +1,9 @@
-package cn.lili.common.message.queue.processor;
+package cn.lili.framework.queue;
 
 import cn.lili.common.message.Topic;
-import cn.lili.common.message.queue.entity.MessageQueue;
-import cn.lili.common.message.queue.listener.MessageQueueListener;
-import cn.lili.common.message.queue.service.MessageQueueService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
@@ -31,6 +29,7 @@ public class MessageQueueProcessor {
 
     private final Map<Topic, MessageQueueListener> listenerMap = new HashMap<>();
 
+
     public MessageQueueProcessor(MessageQueueService messageQueueService, List<MessageQueueListener> messageQueueListeners) {
         this.messageQueueService = messageQueueService;
 
@@ -43,16 +42,14 @@ public class MessageQueueProcessor {
 
     }
 
-    private MessageQueueListener findByTopic(Topic topic) {
-        MessageQueueListener listener = listenerMap.get(topic);
-        Assert.notNull(listener, "No listener found for topic: " + topic);
-        return listener;
-    }
+
+
 
 
     private boolean isRunning = false;
 
     // 单体程序可以由程序主动触发
+    @EventListener(MessageQueueAddEvent.class)
     @Scheduled(fixedDelay = 10, timeUnit = TimeUnit.SECONDS)
     public void triggerExecute() {
         if (isRunning) {
@@ -61,8 +58,24 @@ public class MessageQueueProcessor {
         isRunning = true;
         try {
             loadAndProcess();
-        }finally {
+        } finally {
             isRunning = false;
+        }
+    }
+
+
+
+
+    /**
+     * Clean up old processed messages every day at midnight
+     */
+    @Scheduled(cron = "0 0 0 * * ?")
+    public void cleanUpOldMessages() {
+        try {
+            int deletedCount = messageQueueService.deleteOldMessages(7); // Keep messages for 7 days
+            log.info("Cleaned up {} old processed messages", deletedCount);
+        } catch (Exception e) {
+            log.error("Error cleaning up old messages: {}", e.getMessage(), e);
         }
     }
 
@@ -90,6 +103,11 @@ public class MessageQueueProcessor {
         });
     }
 
+    private MessageQueueListener findByTopic(Topic topic) {
+        MessageQueueListener listener = listenerMap.get(topic);
+        Assert.notNull(listener, "No listener found for topic: " + topic);
+        return listener;
+    }
     private void processOne(MessageQueue message) {
         try {
             log.info("Processing message: id={}, topic={}, tag={}", message.getId(), message.getTopic(), message.getTag());
@@ -102,18 +120,4 @@ public class MessageQueueProcessor {
             messageQueueService.markAsFailed(message.getId(), e.getMessage());
         }
     }
-
-    /**
-     * Clean up old processed messages every day at midnight
-     */
-    @Scheduled(cron = "0 0 0 * * ?")
-    public void cleanUpOldMessages() {
-        try {
-            int deletedCount = messageQueueService.deleteOldMessages(7); // Keep messages for 7 days
-            log.info("Cleaned up {} old processed messages", deletedCount);
-        } catch (Exception e) {
-            log.error("Error cleaning up old messages: {}", e.getMessage(), e);
-        }
-    }
-
 }

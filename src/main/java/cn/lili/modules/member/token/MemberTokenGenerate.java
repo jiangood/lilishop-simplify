@@ -3,7 +3,7 @@ package cn.lili.modules.member.token;
 import cn.lili.common.context.ThreadContextHolder;
 import cn.lili.common.enums.ClientTypeEnum;
 import cn.lili.common.message.Topic;
-import cn.lili.common.message.queue.template.MessageQueueTemplate;
+import cn.lili.framework.queue.MessageQueueTemplate;
 import cn.lili.common.security.AuthUser;
 import cn.lili.common.security.enums.UserEnums;
 import cn.lili.common.security.token.Token;

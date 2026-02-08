@@ -1,7 +1,7 @@
 package cn.lili.consumer.trigger.executor;
 
 import cn.hutool.json.JSONUtil;
-import cn.lili.consumer.trigger.TimeTriggerExecutor;
+import cn.lili.framework.Task;
 import cn.lili.modules.promotion.service.CouponActivityService;
 import cn.lili.trigger.message.CouponActivityMessage;
 import cn.lili.trigger.model.TimeExecuteConstant;
@@ -17,14 +17,14 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component(TimeExecuteConstant.COUPON_ACTIVITY_EXECUTOR)
-public class CouponActivityTriggerExecutor implements TimeTriggerExecutor {
+public class CouponActivityTriggerExecutor implements Task {
 
 
     @Autowired
     private CouponActivityService couponActivityService;
 
     @Override
-    public void execute(Object object) {
+    public void execute(String object) {
         CouponActivityMessage couponActivityMessage = JSONUtil.toBean(JSONUtil.parseObj(object), CouponActivityMessage.class);
         couponActivityService.specifyCoupon(couponActivityMessage.getCouponActivityId());
     }

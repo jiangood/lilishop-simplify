@@ -1,7 +1,7 @@
 package cn.lili.consumer.trigger.executor;
 
 import cn.hutool.json.JSONUtil;
-import cn.lili.consumer.trigger.TimeTriggerExecutor;
+import cn.lili.framework.Task;
 import cn.lili.modules.order.order.service.OrderService;
 import cn.lili.modules.promotion.entity.dos.Pintuan;
 import cn.lili.modules.promotion.service.PintuanService;
@@ -20,7 +20,7 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component(TimeExecuteConstant.PROMOTION_EXECUTOR)
-public class PromotionTimeTriggerExecutor implements TimeTriggerExecutor {
+public class PromotionTimeTriggerExecutor implements Task {
     /**
      * 订单
      */
@@ -31,7 +31,7 @@ public class PromotionTimeTriggerExecutor implements TimeTriggerExecutor {
 
 
     @Override
-    public void execute(Object object) {
+    public void execute(String object) {
         //拼团订单消息
         PintuanOrderMessage pintuanOrderMessage = JSONUtil.toBean(JSONUtil.parseObj(object), PintuanOrderMessage.class);
         if (pintuanOrderMessage != null && pintuanOrderMessage.getPintuanId() != null) {

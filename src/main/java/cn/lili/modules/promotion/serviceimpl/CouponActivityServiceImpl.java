@@ -7,7 +7,6 @@ import cn.lili.cache.CachePrefix;
 import cn.lili.common.enums.PromotionTypeEnum;
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.exception.ServiceException;
-import cn.lili.common.message.Topic;
 import cn.lili.common.security.AuthUser;
 import cn.lili.modules.member.service.MemberService;
 import cn.lili.modules.promotion.entity.dos.Coupon;
@@ -23,11 +22,10 @@ import cn.lili.modules.promotion.mapper.CouponActivityMapper;
 import cn.lili.modules.promotion.service.*;
 import cn.lili.modules.promotion.tools.PromotionTools;
 import cn.lili.trigger.enums.DelayTypeEnums;
-import cn.lili.trigger.interfaces.TimeTrigger;
+import cn.lili.framework.delay.DelayedTaskTemplate;
 import cn.lili.trigger.message.CouponActivityMessage;
-import cn.lili.trigger.model.TimeExecuteConstant;
-import cn.lili.trigger.model.TimeTriggerMsg;
-import cn.lili.trigger.util.DelayQueueTools;
+import cn.lili.framework.delay.DelayTask;
+import cn.lili.trigger.DelayQueueTools;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,6 +37,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import static cn.lili.trigger.model.TimeExecuteConstant.COUPON_ACTIVITY_EXECUTOR;
 
 /**
  * 优惠券活动业务层实现
@@ -71,7 +71,7 @@ public class CouponActivityServiceImpl extends AbstractPromotionsServiceImpl<Cou
      * 延时任务
      */
     @Autowired
-    private TimeTrigger timeTrigger;
+    private DelayedTaskTemplate timeTrigger;
 
     @Override
     public CouponActivityVO getCouponActivityVO(String couponActivityId) {
@@ -88,13 +88,12 @@ public class CouponActivityServiceImpl extends AbstractPromotionsServiceImpl<Cou
             return;
         }
 
-        TimeTriggerMsg timeTriggerMsg = new TimeTriggerMsg(TimeExecuteConstant.COUPON_ACTIVITY_EXECUTOR,
-                couponActivity.getStartTime().getTime(),
+        DelayTask timeTriggerMsg = new DelayTask(COUPON_ACTIVITY_EXECUTOR,
+                couponActivity.getStartTime(),
                 CouponActivityMessage.builder().couponActivityId(couponActivity.getId()).build(),
-                DelayQueueTools.wrapperUniqueKey(DelayTypeEnums.COUPON_ACTIVITY, couponActivity.getId()),
-                Topic.PROMOTION);
+                DelayQueueTools.wrapperUniqueKey(DelayTypeEnums.COUPON_ACTIVITY, couponActivity.getId()));
         //发送促销活动开始的延时任务
-        timeTrigger.addDelay(timeTriggerMsg);
+        timeTrigger.add(timeTriggerMsg);
     }
 
 

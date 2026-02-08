@@ -2,8 +2,8 @@ package cn.lili.consumer.listener;
 
 import cn.hutool.json.JSONUtil;
 import cn.lili.common.message.Topic;
-import cn.lili.common.message.queue.entity.MessageQueue;
-import cn.lili.common.message.queue.listener.MessageQueueListener;
+import cn.lili.framework.queue.MessageQueue;
+import cn.lili.framework.queue.MessageQueueListener;
 import cn.lili.consumer.event.StoreSettingChangeEvent;
 import cn.lili.modules.store.entity.dos.Store;
 import cn.lili.rocketmq.tags.StoreTagsEnum;

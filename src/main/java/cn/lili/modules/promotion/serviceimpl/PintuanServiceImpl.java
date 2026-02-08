@@ -4,7 +4,6 @@ import cn.hutool.core.text.CharSequenceUtil;
 import cn.lili.common.enums.PromotionTypeEnum;
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.exception.ServiceException;
-import cn.lili.common.message.Topic;
 import cn.lili.modules.goods.service.GoodsSkuService;
 import cn.lili.modules.member.entity.dos.Member;
 import cn.lili.modules.member.service.MemberService;
@@ -26,15 +25,16 @@ import cn.lili.modules.promotion.service.PintuanService;
 import cn.lili.modules.promotion.service.PromotionGoodsService;
 import cn.lili.modules.promotion.tools.PromotionTools;
 import cn.lili.trigger.enums.DelayTypeEnums;
-import cn.lili.trigger.interfaces.TimeTrigger;
-import cn.lili.trigger.model.TimeExecuteConstant;
-import cn.lili.trigger.model.TimeTriggerMsg;
-import cn.lili.trigger.util.DelayQueueTools;
+import cn.lili.framework.delay.DelayedTaskTemplate;
+import cn.lili.framework.delay.DelayTask;
+import cn.lili.trigger.DelayQueueTools;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import static cn.lili.trigger.model.TimeExecuteConstant.PROMOTION_EXECUTOR;
 
 /**
  * 拼团业务层实现
@@ -70,7 +70,7 @@ public class PintuanServiceImpl extends AbstractPromotionsServiceImpl<PintuanMap
      * 延时任务
      */
     @Autowired
-    private TimeTrigger timeTrigger;
+    private DelayedTaskTemplate timeTrigger;
 
 
 
@@ -165,13 +165,13 @@ public class PintuanServiceImpl extends AbstractPromotionsServiceImpl<PintuanMap
                 && promotions instanceof PintuanVO) {
             PintuanVO pintuanVO = (PintuanVO) promotions;
             this.updatePintuanPromotionGoods(pintuanVO);
-            TimeTriggerMsg timeTriggerMsg = new TimeTriggerMsg(TimeExecuteConstant.PROMOTION_EXECUTOR,
-                    promotions.getEndTime().getTime(),
+            DelayTask timeTriggerMsg = new DelayTask(PROMOTION_EXECUTOR,
+                    promotions.getEndTime(),
                     promotions,
-                    DelayQueueTools.wrapperUniqueKey(DelayTypeEnums.PINTUAN_ORDER, (promotions.getId())),
-                    Topic.PROMOTION);
+                    DelayQueueTools.wrapperUniqueKey(DelayTypeEnums.PINTUAN_ORDER, (promotions.getId()))
+                    );
             //发送促销活动开始的延时任务
-            this.timeTrigger.addDelay(timeTriggerMsg);
+            this.timeTrigger.add(timeTriggerMsg);
         }
         if (promotions.getEndTime() == null && promotions.getStartTime() == null) {
             //过滤父级拼团订单，根据父级拼团订单分组

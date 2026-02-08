@@ -1,7 +1,6 @@
-package cn.lili.common.message.queue.service;
+package cn.lili.framework.queue;
 
-import cn.lili.common.message.queue.entity.MessageQueue;
-import cn.lili.modules.page.entity.dos.Article;
+import cn.lili.framework.queue.MessageQueue;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

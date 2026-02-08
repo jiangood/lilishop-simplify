@@ -30,7 +30,7 @@ import cn.lili.modules.promotion.service.MemberCouponService;
 
 
 import lombok.extern.slf4j.Slf4j;
-import cn.lili.common.message.queue.template.MessageQueueTemplate;
+import cn.lili.framework.queue.MessageQueueTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 

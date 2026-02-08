@@ -15,7 +15,7 @@ import cn.lili.common.enums.ResultCode;
 import cn.lili.common.event.TransactionCommitSendMessageEvent;
 import cn.lili.common.exception.ServiceException;
 import cn.lili.common.message.Topic;
-import cn.lili.common.message.queue.template.MessageQueueTemplate;
+import cn.lili.framework.queue.MessageQueueTemplate;
 import cn.lili.common.security.OperationalJudgment;
 import cn.lili.common.security.context.UserContext;
 import cn.lili.common.security.enums.UserEnums;
@@ -50,11 +50,10 @@ import cn.lili.modules.system.service.SettingService;
 import cn.lili.mybatis.util.PageUtil;
 import cn.lili.rocketmq.tags.OrderTagsEnum;
 import cn.lili.trigger.enums.DelayTypeEnums;
-import cn.lili.trigger.interfaces.TimeTrigger;
+import cn.lili.framework.delay.DelayedTaskTemplate;
 import cn.lili.trigger.message.PintuanOrderMessage;
-import cn.lili.trigger.model.TimeExecuteConstant;
-import cn.lili.trigger.model.TimeTriggerMsg;
-import cn.lili.trigger.util.DelayQueueTools;
+import cn.lili.framework.delay.DelayTask;
+import cn.lili.trigger.DelayQueueTools;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -83,6 +82,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static cn.lili.rocketmq.tags.GoodsTagsEnum.BUY_GOODS_COMPLETE;
+import static cn.lili.trigger.model.TimeExecuteConstant.PROMOTION_EXECUTOR;
 
 /**
  * 子订单业务层实现
@@ -100,7 +100,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
      * 延时任务
      */
     @Autowired
-    private TimeTrigger timeTrigger;
+    private DelayedTaskTemplate timeTrigger;
     /**
      * 发票
      */
@@ -1047,13 +1047,13 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             }
             pintuanOrderMessage.setOrderSn(parentOrderSn);
             pintuanOrderMessage.setPintuanId(pintuanId);
-            TimeTriggerMsg timeTriggerMsg = new TimeTriggerMsg(TimeExecuteConstant.PROMOTION_EXECUTOR,
-                    startTime,
+            DelayTask timeTriggerMsg = new DelayTask(PROMOTION_EXECUTOR,
+                    new Date(startTime),
                     pintuanOrderMessage,
-                    DelayQueueTools.wrapperUniqueKey(DelayTypeEnums.PINTUAN_ORDER, (pintuanId + parentOrderSn)),
-                    Topic.PROMOTION);
+                    DelayQueueTools.wrapperUniqueKey(DelayTypeEnums.PINTUAN_ORDER, (pintuanId + parentOrderSn))
+                    );
 
-            this.timeTrigger.addDelay(timeTriggerMsg);
+            this.timeTrigger.add(timeTriggerMsg);
         }
         //拼团所需人数，小于等于 参团后的人数，则说明成团，所有订单成团
         if (pintuan.getRequiredNum() <= count) {

@@ -1,4 +1,4 @@
-package cn.lili.common.message.queue.entity;
+package cn.lili.framework.queue;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;

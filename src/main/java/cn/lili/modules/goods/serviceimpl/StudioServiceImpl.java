@@ -2,14 +2,11 @@ package cn.lili.modules.goods.serviceimpl;
 
 import cn.hutool.core.convert.Convert;
 import cn.hutool.core.text.CharSequenceUtil;
-import cn.lili.common.message.Topic;
-import com.alibaba.fastjson2.JSON;
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.exception.ServiceException;
 import cn.lili.common.security.context.UserContext;
 import cn.lili.common.security.enums.UserEnums;
 import cn.lili.common.utils.BeanUtil;
-import cn.lili.common.utils.DateUtil;
 import cn.lili.common.vo.PageVO;
 import cn.lili.modules.goods.entity.dos.Goods;
 import cn.lili.modules.goods.entity.dos.Studio;
@@ -23,26 +20,24 @@ import cn.lili.modules.goods.service.StudioCommodityService;
 import cn.lili.modules.goods.service.StudioService;
 import cn.lili.modules.goods.util.WechatLivePlayerUtil;
 import cn.lili.mybatis.util.PageUtil;
-import cn.lili.trigger.enums.DelayTypeEnums;
-import cn.lili.trigger.interfaces.TimeTrigger;
+import cn.lili.framework.delay.DelayTask;
+import cn.lili.framework.delay.DelayedTaskTemplate;
 import cn.lili.trigger.message.BroadcastMessage;
-import cn.lili.trigger.model.TimeExecuteConstant;
-import cn.lili.trigger.model.TimeTriggerMsg;
-import cn.lili.trigger.util.DelayQueueTools;
+import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
+
+import static cn.lili.trigger.model.TimeExecuteConstant.BROADCAST_EXECUTOR;
 
 /**
  * 小程序直播间业务层实现
@@ -60,7 +55,7 @@ public class StudioServiceImpl extends ServiceImpl<StudioMapper, Studio> impleme
     @Autowired
     private CommodityService commodityService;
     @Autowired
-    private TimeTrigger timeTrigger;
+    private DelayedTaskTemplate timeTrigger;
     @Autowired
     private GoodsService goodsService;
 
@@ -75,60 +70,59 @@ public class StudioServiceImpl extends ServiceImpl<StudioMapper, Studio> impleme
         studio.setStatus(StudioStatusEnum.NEW.name());
         //直播间添加成功发送直播间开启、关闭延时任务
         if (this.save(studio)) {
-            //直播开启延时任务
-            BroadcastMessage broadcastMessage = new BroadcastMessage(studio.getId(), StudioStatusEnum.START.name());
-            TimeTriggerMsg timeTriggerMsg = new TimeTriggerMsg(TimeExecuteConstant.BROADCAST_EXECUTOR,
-                    Long.parseLong(studio.getStartTime()) * 1000L,
-                    broadcastMessage,
-                    DelayQueueTools.wrapperUniqueKey(DelayTypeEnums.BROADCAST, studio.getId())
-                    , Topic.PROMOTION);
-
-            //发送促销活动开始的延时任务
-            this.timeTrigger.addDelay(timeTriggerMsg);
-
-            //直播结束延时任务
-            broadcastMessage = new BroadcastMessage(studio.getId(), StudioStatusEnum.END.name());
-            timeTriggerMsg = new TimeTriggerMsg(TimeExecuteConstant.BROADCAST_EXECUTOR,
-                    Long.parseLong(studio.getEndTime()) * 1000L, broadcastMessage,
-                    DelayQueueTools.wrapperUniqueKey(DelayTypeEnums.BROADCAST, studio.getId()),
-                    Topic.PROMOTION);
-            //发送促销活动开始的延时任务
-            this.timeTrigger.addDelay(timeTriggerMsg);
+            triggerDelayJob(studio, false);
         }
         return true;
 
     }
 
+    private void triggerDelayJob(Studio studio, boolean isEdit) {
+        //直播开启延时任务
+        {
+            BroadcastMessage broadcastMessage = new BroadcastMessage(studio.getId(), StudioStatusEnum.START.name());
+            String jobKey = getJobKey(studio, StudioStatusEnum.START);
+            DelayTask request = new DelayTask(BROADCAST_EXECUTOR,
+                    new Date(Long.parseLong(studio.getStartTime()) * 1000L),
+                    broadcastMessage,
+                    jobKey
+                    );
+
+            if (isEdit) {
+                this.timeTrigger.delete(jobKey);
+            }
+
+            //发送促销活动开始的延时任务
+            this.timeTrigger.add(request);
+        }
+
+        {
+            //直播结束延时任务
+            BroadcastMessage broadcastMessage = new BroadcastMessage(studio.getId(), StudioStatusEnum.END.name());
+            String jobKey = getJobKey(studio, StudioStatusEnum.END);
+            DelayTask request = new DelayTask(BROADCAST_EXECUTOR,
+                    new Date(Long.parseLong(studio.getEndTime()) * 1000L), broadcastMessage, jobKey);
+
+            if (isEdit) {
+                this.timeTrigger.delete(jobKey);
+            }
+            //发送促销活动开始的延时任务
+            this.timeTrigger.add(request);
+        }
+    }
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Boolean edit(Studio studio) {
-        Studio oldStudio = this.getById(studio.getId());
         wechatLivePlayerUtil.editRoom(studio);
         if (this.updateById(studio)) {
-            //发送更新延时任务
-            //直播间开始
-            BroadcastMessage broadcastMessage = new BroadcastMessage(studio.getId(), StudioStatusEnum.START.name());
-            this.timeTrigger.edit(
-                    TimeExecuteConstant.BROADCAST_EXECUTOR,
-                    broadcastMessage,
-                    Long.parseLong(oldStudio.getStartTime()) * 1000L,
-                    Long.parseLong(studio.getStartTime()) * 1000L,
-                    DelayQueueTools.wrapperUniqueKey(DelayTypeEnums.BROADCAST, studio.getId()),
-                    DateUtil.getDelayTime(Long.parseLong(studio.getStartTime())),
-                    Topic.PROMOTION);
-
-            //直播间结束
-            broadcastMessage = new BroadcastMessage(studio.getId(), StudioStatusEnum.END.name());
-            this.timeTrigger.edit(
-                    TimeExecuteConstant.BROADCAST_EXECUTOR,
-                    broadcastMessage,
-                    Long.parseLong(oldStudio.getEndTime()) * 1000L,
-                    Long.parseLong(studio.getEndTime()) * 1000L,
-                    DelayQueueTools.wrapperUniqueKey(DelayTypeEnums.BROADCAST, studio.getId()),
-                    DateUtil.getDelayTime(Long.parseLong(studio.getEndTime())),
-                    Topic.PROMOTION);
+            this.triggerDelayJob(studio, true);
         }
         return true;
+    }
+
+    @NotNull
+    private static String getJobKey(Studio studio, StudioStatusEnum status) {
+        return "BROADCAST_" + studio.getId() + "_" + status;
     }
 
     @Override

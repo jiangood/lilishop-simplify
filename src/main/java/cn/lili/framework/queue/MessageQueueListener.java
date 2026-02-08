@@ -1,7 +1,6 @@
-package cn.lili.common.message.queue.listener;
+package cn.lili.framework.queue;
 
 import cn.lili.common.message.Topic;
-import cn.lili.common.message.queue.entity.MessageQueue;
 
 
 public interface MessageQueueListener {
