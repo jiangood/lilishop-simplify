@@ -14,6 +14,7 @@ import org.springframework.util.MultiValueMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 
 @Slf4j
@@ -48,8 +49,23 @@ public class MessageQueueProcessor {
     }
 
 
-    @Scheduled(fixedDelay = 5000)
-    public void processMessages() {
+    private boolean isRunning = false;
+
+    // 单体程序可以由程序主动触发
+    @Scheduled(fixedDelay = 10, timeUnit = TimeUnit.SECONDS)
+    public void triggerExecute() {
+        if (isRunning) {
+            return;
+        }
+        isRunning = true;
+        try {
+            loadAndProcess();
+        }finally {
+            isRunning = false;
+        }
+    }
+
+    private void loadAndProcess() {
         List<MessageQueue> pendingMessages = messageQueueService.findPending(BATCH_PROCESS_SIZE);
         if (pendingMessages.isEmpty()) {
             return;
@@ -71,7 +87,6 @@ public class MessageQueueProcessor {
             List<MessageQueue> messages = entry.getValue();
             messages.forEach(this::processOne);
         });
-
     }
 
     private void processOne(MessageQueue message) {

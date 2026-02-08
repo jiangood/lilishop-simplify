@@ -1,5 +1,6 @@
 package cn.lili.common.event;
 
+import cn.lili.common.message.Topic;
 import lombok.Getter;
 import org.springframework.context.ApplicationEvent;
 
@@ -16,7 +17,7 @@ public class TransactionCommitSendMessageEvent extends ApplicationEvent {
     private static final long serialVersionUID = 1L;
 
     @Getter
-    private final String topic;
+    private final Topic topic;
 
     @Getter
     private final String tag;
@@ -24,7 +25,7 @@ public class TransactionCommitSendMessageEvent extends ApplicationEvent {
     @Getter
     private final Object message;
 
-    public TransactionCommitSendMessageEvent(Object source, String topic, String tag, Object message) {
+    public TransactionCommitSendMessageEvent(Object source, Topic topic, String tag, Object message) {
         super(source);
         this.topic = topic;
         this.tag = tag;

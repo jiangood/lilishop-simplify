@@ -2,17 +2,20 @@ package cn.lili.modules.member.token;
 
 import cn.lili.common.context.ThreadContextHolder;
 import cn.lili.common.enums.ClientTypeEnum;
+import cn.lili.common.message.Topic;
+import cn.lili.common.message.queue.template.MessageQueueTemplate;
 import cn.lili.common.security.AuthUser;
 import cn.lili.common.security.enums.UserEnums;
 import cn.lili.common.security.token.Token;
 import cn.lili.common.security.token.TokenUtil;
 import cn.lili.common.security.token.base.AbstractTokenGenerate;
 import cn.lili.modules.member.entity.dos.Member;
-import cn.lili.common.message.queue.template.MessageQueueTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.Date;
+
+import static cn.lili.rocketmq.tags.MemberTagsEnum.MEMBER_LOGIN;
 
 /**
  * 会员token生成
@@ -49,8 +52,7 @@ public class MemberTokenGenerate extends AbstractTokenGenerate<Member> {
         member.setLastLoginDate(new Date());
         member.setClientEnum(clientTypeEnum.name());
         if (messageQueueTemplate != null) {
-            String destination = "member:" + "MEMBER_LOGIN";
-            messageQueueTemplate.send(destination, member);
+            messageQueueTemplate.send(Topic.MEMBER, MEMBER_LOGIN.name(), member);
         }
 
         AuthUser authUser = AuthUser.builder()

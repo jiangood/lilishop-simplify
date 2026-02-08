@@ -2,10 +2,10 @@ package cn.lili.modules.order.aftersale.serviceimpl;
 
 import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.core.util.NumberUtil;
-import cn.hutool.json.JSONUtil;
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.event.TransactionCommitSendMessageEvent;
 import cn.lili.common.exception.ServiceException;
+import cn.lili.common.message.Topic;
 import cn.lili.common.security.AuthUser;
 import cn.lili.common.security.OperationalJudgment;
 import cn.lili.common.security.context.UserContext;
@@ -103,25 +103,25 @@ public class AfterSaleServiceImpl extends ServiceImpl<AfterSaleMapper, AfterSale
     @Override
     public AfterSaleNumVO getAfterSaleNumVO(AfterSaleSearchParams saleSearchParams) {
         AfterSaleNumVO afterSaleNumVO = new AfterSaleNumVO();
-        
+
         // 获取基础查询条件
         QueryWrapper<AfterSale> baseWrapper = saleSearchParams.queryWrapper();
-        
+
         // 使用聚合查询一次性获取所有状态的售后数量
         List<Map<String, Object>> results = this.baseMapper.selectMaps(
-            baseWrapper.select(
-                "COUNT(CASE WHEN service_status = 'APPLY' THEN 1 END) as applyNum",
-                "COUNT(CASE WHEN service_status = 'PASS' THEN 1 END) as passNum",
-                "COUNT(CASE WHEN service_status = 'REFUSE' THEN 1 END) as refuseNum",
-                "COUNT(CASE WHEN service_status = 'BUYER_RETURN' THEN 1 END) as buyerReturnNum",
-                "COUNT(CASE WHEN service_status = 'SELLER_CONFIRM' THEN 1 END) as sellerConfirmNum",
-                "COUNT(CASE WHEN service_status = 'SELLER_TERMINATION' THEN 1 END) as sellerTerminationNum",
-                "COUNT(CASE WHEN service_status = 'BUYER_CANCEL' THEN 1 END) as buyerCancelNum",
-                "COUNT(CASE WHEN service_status = 'WAIT_REFUND' THEN 1 END) as waitRefundNum",
-                "COUNT(CASE WHEN service_status = 'COMPLETE' THEN 1 END) as completeNum"
-            )
+                baseWrapper.select(
+                        "COUNT(CASE WHEN service_status = 'APPLY' THEN 1 END) as applyNum",
+                        "COUNT(CASE WHEN service_status = 'PASS' THEN 1 END) as passNum",
+                        "COUNT(CASE WHEN service_status = 'REFUSE' THEN 1 END) as refuseNum",
+                        "COUNT(CASE WHEN service_status = 'BUYER_RETURN' THEN 1 END) as buyerReturnNum",
+                        "COUNT(CASE WHEN service_status = 'SELLER_CONFIRM' THEN 1 END) as sellerConfirmNum",
+                        "COUNT(CASE WHEN service_status = 'SELLER_TERMINATION' THEN 1 END) as sellerTerminationNum",
+                        "COUNT(CASE WHEN service_status = 'BUYER_CANCEL' THEN 1 END) as buyerCancelNum",
+                        "COUNT(CASE WHEN service_status = 'WAIT_REFUND' THEN 1 END) as waitRefundNum",
+                        "COUNT(CASE WHEN service_status = 'COMPLETE' THEN 1 END) as completeNum"
+                )
         );
-        
+
         if (!results.isEmpty()) {
             Map<String, Object> result = results.get(0);
             afterSaleNumVO.setApplyNum(((Number) result.get("applyNum")).intValue());
@@ -145,7 +145,7 @@ public class AfterSaleServiceImpl extends ServiceImpl<AfterSaleMapper, AfterSale
             afterSaleNumVO.setWaitRefundNum(0);
             afterSaleNumVO.setCompleteNum(0);
         }
-        
+
         return afterSaleNumVO;
     }
 
@@ -625,10 +625,11 @@ public class AfterSaleServiceImpl extends ServiceImpl<AfterSaleMapper, AfterSale
      */
     @Transactional(rollbackFor = Exception.class)
     public void sendAfterSaleMessage(AfterSale afterSale) {
-        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("发送售后单状态变更MQ消息", "after-sale-topic",
-                AfterSaleTagsEnum.AFTER_SALE_STATUS_CHANGE.name(), JSONUtil.toJsonStr(afterSale)));
+        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("发送售后单状态变更MQ消息", Topic.AFTER_SALE,
+                AfterSaleTagsEnum.AFTER_SALE_STATUS_CHANGE.name(), afterSale));
     }
 
+    // TODO 检查为啥没调用，参考原始逻辑
     /**
      * 功能描述: 获取售后商品数量及已完成售后商品数量修改orderItem订单
      *

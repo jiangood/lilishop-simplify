@@ -1,6 +1,7 @@
 package cn.lili.common.message.queue.service;
 
 import cn.hutool.json.JSONUtil;
+import cn.lili.common.message.Topic;
 import cn.lili.common.message.queue.entity.MessageQueue;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -12,6 +13,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.json.Json;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -24,16 +26,16 @@ public class MessageQueueService  {
     private MessageQueueRepository messageQueueRepository;
 
     @Transactional
-    public void send(String topic, String tag, Object message) {
+    public void send(Topic topic, String tag, Object message) {
         MessageQueue messageQueue = new MessageQueue();
-        messageQueue.setTopic(topic);
+        messageQueue.setTopic(topic.name());
         messageQueue.setTag(tag);
         messageQueue.setBody(JSONUtil.toJsonStr(message));
         messageQueue.setStatus(0);
         messageQueueRepository.save(messageQueue);
     }
 
-    
+
 
 
 

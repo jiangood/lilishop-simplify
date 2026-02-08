@@ -1,5 +1,6 @@
 package cn.lili.trigger.interfaces;
 
+import cn.lili.common.message.Topic;
 import cn.lili.trigger.model.TimeTriggerMsg;
 
 /**
@@ -35,7 +36,7 @@ public interface TimeTrigger {
      * @param delayTime      延时时间（秒）
      * @param topic          rocketmq topic
      */
-    void edit(String executorName, Object param, Long oldTriggerTime, Long triggerTime, String uniqueKey, int delayTime, String topic);
+    void edit(String executorName, Object param, Long oldTriggerTime, Long triggerTime, String uniqueKey, int delayTime, Topic topic);
 
     /**
      * 删除延时任务
@@ -45,5 +46,5 @@ public interface TimeTrigger {
      * @param uniqueKey    添加任务时的唯一凭证
      * @param topic        rocketmq topic
      */
-    void delete(String executorName, Long triggerTime, String uniqueKey, String topic);
+    void delete(String executorName, Long triggerTime, String uniqueKey, Topic topic);
 }

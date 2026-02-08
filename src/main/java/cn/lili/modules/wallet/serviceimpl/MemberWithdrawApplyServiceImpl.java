@@ -3,6 +3,7 @@ package cn.lili.modules.wallet.serviceimpl;
 
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.exception.ServiceException;
+import cn.lili.common.message.Topic;
 import cn.lili.common.message.queue.template.MessageQueueTemplate;
 import cn.lili.common.utils.StringUtils;
 import cn.lili.common.vo.PageVO;
@@ -77,8 +78,7 @@ public class MemberWithdrawApplyServiceImpl extends ServiceImpl<MemberWithdrawAp
             memberWithdrawalMessage.setMemberId(memberWithdrawApply.getMemberId());
             memberWithdrawalMessage.setPrice(memberWithdrawApply.getApplyMoney());
 
-            String destination = "member-topic" + ":" + MemberTagsEnum.MEMBER_WITHDRAWAL.name();
-            messageQueueTemplate.send(destination, memberWithdrawalMessage);
+            messageQueueTemplate.send(Topic.MEMBER, MemberTagsEnum.MEMBER_WITHDRAWAL.name(),memberWithdrawalMessage);
             return true;
         }
         throw new ServiceException(ResultCode.WALLET_APPLY_ERROR);

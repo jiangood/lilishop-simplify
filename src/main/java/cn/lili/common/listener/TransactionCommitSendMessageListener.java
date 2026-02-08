@@ -29,9 +29,7 @@ public class TransactionCommitSendMessageListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void send(TransactionCommitSendMessageEvent event) {
         log.info("Transaction committed, sending message: topic={}, tag={}", event.getTopic(), event.getTag());
-        String destination = event.getTopic() + ":" + event.getTag();
-        // Send message asynchronously
-        messageQueueTemplate.send(destination, event.getMessage());
+        messageQueueTemplate.send(event.getTopic(), event.getTag(), event.getMessage());
     }
 
 }

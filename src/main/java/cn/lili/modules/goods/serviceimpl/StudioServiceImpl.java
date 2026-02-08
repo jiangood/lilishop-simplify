@@ -2,6 +2,7 @@ package cn.lili.modules.goods.serviceimpl;
 
 import cn.hutool.core.convert.Convert;
 import cn.hutool.core.text.CharSequenceUtil;
+import cn.lili.common.message.Topic;
 import com.alibaba.fastjson2.JSON;
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.exception.ServiceException;
@@ -79,8 +80,8 @@ public class StudioServiceImpl extends ServiceImpl<StudioMapper, Studio> impleme
             TimeTriggerMsg timeTriggerMsg = new TimeTriggerMsg(TimeExecuteConstant.BROADCAST_EXECUTOR,
                     Long.parseLong(studio.getStartTime()) * 1000L,
                     broadcastMessage,
-                    DelayQueueTools.wrapperUniqueKey(DelayTypeEnums.BROADCAST, studio.getId()),
-                    "promotion-topic");
+                    DelayQueueTools.wrapperUniqueKey(DelayTypeEnums.BROADCAST, studio.getId())
+                    , Topic.PROMOTION);
 
             //发送促销活动开始的延时任务
             this.timeTrigger.addDelay(timeTriggerMsg);
@@ -90,7 +91,7 @@ public class StudioServiceImpl extends ServiceImpl<StudioMapper, Studio> impleme
             timeTriggerMsg = new TimeTriggerMsg(TimeExecuteConstant.BROADCAST_EXECUTOR,
                     Long.parseLong(studio.getEndTime()) * 1000L, broadcastMessage,
                     DelayQueueTools.wrapperUniqueKey(DelayTypeEnums.BROADCAST, studio.getId()),
-                    "promotion-topic");
+                    Topic.PROMOTION);
             //发送促销活动开始的延时任务
             this.timeTrigger.addDelay(timeTriggerMsg);
         }
@@ -114,7 +115,7 @@ public class StudioServiceImpl extends ServiceImpl<StudioMapper, Studio> impleme
                     Long.parseLong(studio.getStartTime()) * 1000L,
                     DelayQueueTools.wrapperUniqueKey(DelayTypeEnums.BROADCAST, studio.getId()),
                     DateUtil.getDelayTime(Long.parseLong(studio.getStartTime())),
-                    "promotion-topic");
+                    Topic.PROMOTION);
 
             //直播间结束
             broadcastMessage = new BroadcastMessage(studio.getId(), StudioStatusEnum.END.name());
@@ -125,7 +126,7 @@ public class StudioServiceImpl extends ServiceImpl<StudioMapper, Studio> impleme
                     Long.parseLong(studio.getEndTime()) * 1000L,
                     DelayQueueTools.wrapperUniqueKey(DelayTypeEnums.BROADCAST, studio.getId()),
                     DateUtil.getDelayTime(Long.parseLong(studio.getEndTime())),
-                    "promotion-topic");
+                    Topic.PROMOTION);
         }
         return true;
     }

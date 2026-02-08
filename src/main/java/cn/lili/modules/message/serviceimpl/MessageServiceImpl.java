@@ -1,6 +1,7 @@
 package cn.lili.modules.message.serviceimpl;
 
 
+import cn.lili.common.message.Topic;
 import cn.lili.common.vo.PageVO;
 import cn.lili.modules.message.entity.dos.Message;
 import cn.lili.modules.message.entity.vos.MessageVO;
@@ -9,6 +10,7 @@ import cn.lili.modules.message.service.MessageService;
 import cn.lili.mybatis.util.PageUtil;
 
 
+import cn.lili.rocketmq.tags.OtherTagsEnum;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import cn.lili.common.message.queue.template.MessageQueueTemplate;
@@ -41,8 +43,7 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message> impl
         //保存站内信信息
         this.save(message);
         //发送站内信消息提醒
-        String noticeSendDestination = "notice:" + "MESSAGE";
-        messageQueueTemplate.send(noticeSendDestination, message);
+        messageQueueTemplate.send(Topic.NOTICE, OtherTagsEnum.MESSAGE.name(), message);
         return true;
     }
 

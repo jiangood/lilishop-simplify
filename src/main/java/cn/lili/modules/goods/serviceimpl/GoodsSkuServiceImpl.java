@@ -11,6 +11,7 @@ import cn.lili.common.event.TransactionCommitSendMessageEvent;
 import cn.lili.common.event.TransactionCommitSendMessageEvent;
 import cn.lili.common.exception.ServiceException;
 
+import cn.lili.common.message.Topic;
 import cn.lili.common.security.AuthUser;
 import cn.lili.common.security.context.UserContext;
 import cn.lili.common.utils.SnowFlake;
@@ -78,6 +79,8 @@ import java.io.InputStream;
 import java.net.URLEncoder;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static cn.lili.rocketmq.tags.GoodsTagsEnum.*;
 
 /**
  * 商品sku业务层实现
@@ -180,8 +183,7 @@ public class GoodsSkuServiceImpl extends ServiceImpl<GoodsSkuMapper, GoodsSku> i
             goodsGalleryService.removeByGoodsId(goods.getId());
 
             //发送mq消息
-            String destination = "goods:" + "SKU_DELETE";
-            sendIfPresent(destination, JSON.toJSONString(oldSkuIds));
+            messageQueueTemplate.send(Topic.GOODS, SKU_DELETE.name(), oldSkuIds);
         } else {
             skuList = new ArrayList<>();
             for (Map<String, Object> map : goodsOperationDTO.getSkuList()) {
@@ -278,15 +280,14 @@ public class GoodsSkuServiceImpl extends ServiceImpl<GoodsSkuMapper, GoodsSku> i
         //如果使用商品ID无法查询SKU则返回错误
         if (goodsVO == null || goodsSku == null) {
             //发送mq消息
-            String destination = "goods:" + "GOODS_DELETE";
-            sendIfPresent(destination, JSON.toJSONString(Collections.singletonList(goodsId)));
+            messageQueueTemplate.send(Topic.GOODS, GOODS_DELETE.name(), Collections.singletonList(goodsId));
             throw new ServiceException(ResultCode.GOODS_NOT_EXIST);
         }
 
         //商品下架||商品未审核通过||商品删除，则提示：商品已下架
         if (GoodsStatusEnum.DOWN.name().equals(goodsVO.getMarketEnable()) || !GoodsAuthEnum.PASS.name().equals(goodsVO.getAuthFlag()) || Boolean.TRUE.equals(goodsVO.getDeleteFlag())) {
             String destination = "goods:" + "GOODS_DELETE";
-            sendIfPresent(destination, JSON.toJSONString(Collections.singletonList(goodsId)));
+            messageQueueTemplate.send(Topic.GOODS, GOODS_DELETE.name(), Collections.singletonList(goodsId));
             throw new ServiceException(ResultCode.GOODS_NOT_EXIST);
         }
 
@@ -365,8 +366,7 @@ public class GoodsSkuServiceImpl extends ServiceImpl<GoodsSkuMapper, GoodsSku> i
         //记录用户足迹
         if (currentUser != null) {
             FootPrint footPrint = new FootPrint(currentUser.getId(), goodsIndex.getStoreId(), goodsId, skuId);
-            String destination = "goods:" + "VIEW_GOODS";
-            sendIfPresent(destination, footPrint);
+            messageQueueTemplate.send(Topic.GOODS, VIEW_GOODS.name(), footPrint);
         }
         return map;
     }
@@ -415,12 +415,12 @@ public class GoodsSkuServiceImpl extends ServiceImpl<GoodsSkuMapper, GoodsSku> i
         if (Boolean.TRUE.equals(update)) {
             if (GoodsStatusEnum.UPPER.name().equals(marketEnable)) {
                 applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("生成店铺商品",
-                        "goods", "GENERATOR_STORE_GOODS_INDEX",
+                        Topic.GOODS, GENERATOR_STORE_GOODS_INDEX.name(),
                         storeId));
             } else if (GoodsStatusEnum.DOWN.name().equals(marketEnable)) {
                 cache.vagueDel(CachePrefix.GOODS_SKU.getPrefix());
                 applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("删除店铺商品",
-                        "goods", "STORE_GOODS_DELETE", storeId));
+                        Topic.GOODS, STORE_GOODS_DELETE.name(), storeId));
             }
         }
     }
@@ -728,7 +728,7 @@ public class GoodsSkuServiceImpl extends ServiceImpl<GoodsSkuMapper, GoodsSku> i
             if (isFlag && quantity > 0 && CharSequenceUtil.equals(goodsSku.getMarketEnable(), GoodsStatusEnum.UPPER.name())) {
                 List<String> goodsIds = new ArrayList<>();
                 goodsIds.add(goodsSku.getGoodsId());
-                applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("更新商品", "goods", "UPDATE_GOODS_INDEX", goodsIds));
+                applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("更新商品", Topic.GOODS, UPDATE_GOODS_INDEX.name(), goodsIds));
             }
         }
     }
@@ -765,7 +765,7 @@ public class GoodsSkuServiceImpl extends ServiceImpl<GoodsSkuMapper, GoodsSku> i
             if (isFlag && quantity > 0 && CharSequenceUtil.equals(goodsSku.getMarketEnable(), GoodsStatusEnum.UPPER.name())) {
                 List<String> goodsIds = new ArrayList<>();
                 goodsIds.add(goodsSku.getGoodsId());
-                applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("更新商品", "goods", "UPDATE_GOODS_INDEX", goodsIds));
+                applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("更新商品", Topic.GOODS, UPDATE_GOODS_INDEX.name(), goodsIds));
             }
         }
     }
@@ -1117,10 +1117,6 @@ public class GoodsSkuServiceImpl extends ServiceImpl<GoodsSkuMapper, GoodsSku> i
         skuListSheet.setColumnWidth(4, 30 * 256);
     }
 
-    private void sendIfPresent(String destination, Object payload) {
-        if (messageQueueTemplate != null) {
-            messageQueueTemplate.send(destination, payload);
-        }
-    }
+
 
 }

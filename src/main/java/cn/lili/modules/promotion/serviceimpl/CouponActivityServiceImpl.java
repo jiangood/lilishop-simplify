@@ -7,6 +7,7 @@ import cn.lili.cache.CachePrefix;
 import cn.lili.common.enums.PromotionTypeEnum;
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.exception.ServiceException;
+import cn.lili.common.message.Topic;
 import cn.lili.common.security.AuthUser;
 import cn.lili.modules.member.service.MemberService;
 import cn.lili.modules.promotion.entity.dos.Coupon;
@@ -91,7 +92,7 @@ public class CouponActivityServiceImpl extends AbstractPromotionsServiceImpl<Cou
                 couponActivity.getStartTime().getTime(),
                 CouponActivityMessage.builder().couponActivityId(couponActivity.getId()).build(),
                 DelayQueueTools.wrapperUniqueKey(DelayTypeEnums.COUPON_ACTIVITY, couponActivity.getId()),
-                "promotion-topic");
+                Topic.PROMOTION);
         //发送促销活动开始的延时任务
         timeTrigger.addDelay(timeTriggerMsg);
     }

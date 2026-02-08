@@ -1,11 +1,13 @@
 package cn.lili.modules.sms.serviceimpl;
 
 import cn.hutool.json.JSONUtil;
+import cn.lili.common.message.Topic;
 import cn.lili.common.utils.BeanUtil;
 import cn.lili.modules.sms.entity.dos.SmsReach;
 import cn.lili.modules.sms.entity.dto.SmsReachDTO;
 import cn.lili.modules.sms.mapper.SmsReachMapper;
 import cn.lili.modules.sms.service.SmsReachService;
+import cn.lili.rocketmq.tags.OtherTagsEnum;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import cn.lili.common.message.queue.template.MessageQueueTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,13 +31,12 @@ public class SmsReachServiceImpl extends ServiceImpl<SmsReachMapper, SmsReach> i
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void addSmsReach(SmsReach smsReach,List<String> mobile) {
-        String destination = "notice:" + "SMS";
         SmsReachDTO smsReachDTO = new SmsReachDTO();
         BeanUtil.copyProperties(smsReach,smsReachDTO);
         smsReachDTO.setMobile(mobile);
         this.save(smsReach);
         //发送短信批量发送mq消息
-        messageQueueTemplate.send(destination, JSONUtil.toJsonStr(smsReachDTO));
+        messageQueueTemplate.send(Topic.NOTICE, OtherTagsEnum.SMS.name(),smsReachDTO);
 
     }
 }

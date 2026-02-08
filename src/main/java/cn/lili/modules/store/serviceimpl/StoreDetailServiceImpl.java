@@ -2,10 +2,10 @@ package cn.lili.modules.store.serviceimpl;
 
 import cn.hutool.core.date.DateTime;
 import cn.hutool.core.map.MapUtil;
-import com.alibaba.fastjson2.JSON;
 import cn.lili.cache.Cache;
 import cn.lili.cache.CachePrefix;
-
+import cn.lili.common.message.Topic;
+import cn.lili.common.message.queue.template.MessageQueueTemplate;
 import cn.lili.common.security.AuthUser;
 import cn.lili.common.security.context.UserContext;
 import cn.lili.common.utils.BeanUtil;
@@ -26,13 +26,12 @@ import cn.lili.modules.store.entity.vos.StoreOtherVO;
 import cn.lili.modules.store.mapper.StoreDetailMapper;
 import cn.lili.modules.store.service.StoreDetailService;
 import cn.lili.modules.store.service.StoreService;
-
-
+import cn.lili.rocketmq.tags.GoodsTagsEnum;
+import cn.lili.rocketmq.tags.StoreTagsEnum;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import cn.lili.common.message.queue.template.MessageQueueTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -100,9 +99,8 @@ public class StoreDetailServiceImpl extends ServiceImpl<StoreDetailMapper, Store
             this.updateStoreGoodsInfo(store);
             this.removeCache(store.getId());
         }
-        String destination = "store:" + "EDIT_STORE_SETTING";
         //发送订单变更mq消息
-        messageQueueTemplate.send(destination, store);
+        messageQueueTemplate.send(Topic.STORE, StoreTagsEnum.EDIT_STORE_SETTING.name(), store);
         return result;
     }
 
@@ -114,9 +112,8 @@ public class StoreDetailServiceImpl extends ServiceImpl<StoreDetailMapper, Store
         Map<String, Object> updateIndexFieldsMap = EsIndexUtil.getUpdateIndexFieldsMap(
                 MapUtil.builder(new HashMap<String, Object>()).put("storeId", store.getId()).build(),
                 MapUtil.builder(new HashMap<String, Object>()).put("storeName", store.getStoreName()).put("selfOperated", store.getSelfOperated()).build());
-        String destination = "goods:" + "UPDATE_GOODS_INDEX_FIELD";
         //发送mq消息
-        messageQueueTemplate.send(destination, JSON.toJSONString(updateIndexFieldsMap));
+        messageQueueTemplate.send(Topic.GOODS, GoodsTagsEnum.UPDATE_GOODS_INDEX_FIELD.name(), updateIndexFieldsMap);
     }
 
     @Override

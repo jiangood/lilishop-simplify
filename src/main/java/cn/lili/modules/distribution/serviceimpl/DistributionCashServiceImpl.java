@@ -3,6 +3,7 @@ package cn.lili.modules.distribution.serviceimpl;
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.exception.ServiceException;
 
+import cn.lili.common.message.Topic;
 import cn.lili.common.utils.CurrencyUtil;
 import cn.lili.common.utils.SnowFlake;
 import cn.lili.common.vo.PageVO;
@@ -18,6 +19,7 @@ import cn.lili.modules.wallet.entity.enums.WithdrawStatusEnum;
 import cn.lili.mybatis.util.PageUtil;
 
 
+import cn.lili.rocketmq.tags.MemberTagsEnum;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -81,8 +83,7 @@ public class DistributionCashServiceImpl extends ServiceImpl<DistributionCashMap
                 memberWithdrawalMessage.setMemberId(distribution.getMemberId());
                 memberWithdrawalMessage.setPrice(applyMoney);
                 memberWithdrawalMessage.setStatus(WithdrawStatusEnum.APPLY.name());
-                String destination = "member:" + "MEMBER_WITHDRAW";
-                messageQueueTemplate.send(destination, memberWithdrawalMessage);
+                messageQueueTemplate.send(Topic.MEMBER, MemberTagsEnum.MEMBER_WITHDRAWAL.name(), memberWithdrawalMessage);
                 return true;
             }
             return false;

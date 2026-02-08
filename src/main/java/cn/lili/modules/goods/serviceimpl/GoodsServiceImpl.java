@@ -4,19 +4,19 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.map.MapUtil;
 import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.core.util.NumberUtil;
-import cn.lili.modules.goods.entity.dto.GoodsParamsItemDTO;
-import com.alibaba.fastjson2.JSON;
 import cn.lili.cache.Cache;
 import cn.lili.cache.CachePrefix;
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.event.TransactionCommitSendMessageEvent;
 import cn.lili.common.exception.ServiceException;
-
+import cn.lili.common.message.Topic;
+import cn.lili.common.message.queue.template.MessageQueueTemplate;
 import cn.lili.common.security.AuthUser;
 import cn.lili.common.security.context.UserContext;
 import cn.lili.common.security.enums.UserEnums;
 import cn.lili.modules.goods.entity.dos.*;
 import cn.lili.modules.goods.entity.dto.GoodsOperationDTO;
+import cn.lili.modules.goods.entity.dto.GoodsParamsItemDTO;
 import cn.lili.modules.goods.entity.dto.GoodsSearchParams;
 import cn.lili.modules.goods.entity.enums.GoodsAuthEnum;
 import cn.lili.modules.goods.entity.enums.GoodsStatusEnum;
@@ -40,8 +40,7 @@ import cn.lili.modules.system.entity.dto.GoodsSetting;
 import cn.lili.modules.system.entity.enums.SettingEnum;
 import cn.lili.modules.system.service.SettingService;
 import cn.lili.mybatis.util.PageUtil;
-
-
+import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -49,7 +48,6 @@ import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import cn.lili.common.message.queue.template.MessageQueueTemplate;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
@@ -59,6 +57,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static cn.lili.rocketmq.tags.GoodsTagsEnum.*;
 
 /**
  * 商品业务层实现
@@ -136,7 +136,7 @@ public class GoodsServiceImpl extends ServiceImpl<GoodsMapper, Goods> implements
         //下架店铺下的商品
         this.updateGoodsMarketAbleByStoreId(storeId, GoodsStatusEnum.DOWN, "店铺关闭");
 
-        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("下架商品", "goods", "DOWN", JSON.toJSONString(list)));
+        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("下架商品", Topic.GOODS, DOWN.name(), list));
 
     }
 
@@ -171,7 +171,7 @@ public class GoodsServiceImpl extends ServiceImpl<GoodsMapper, Goods> implements
         //检查商品
         this.checkGoods(goods);
         //向goods加入图片
-        if (goodsOperationDTO.getGoodsGalleryList().size() > 0) {
+        if (!goodsOperationDTO.getGoodsGalleryList().isEmpty()) {
             this.setGoodsGalleryParam(goodsOperationDTO.getGoodsGalleryList().get(0), goods);
         }
         //添加商品参数
@@ -179,7 +179,7 @@ public class GoodsServiceImpl extends ServiceImpl<GoodsMapper, Goods> implements
             //给商品参数填充值
             goods.setParams(JSON.toJSONString(goodsOperationDTO.getGoodsParamsDTOList()));
         }
-        
+
         // 检查库存，如果总库存为0则设置为下架状态
         int totalStock = 0;
         if (goodsOperationDTO.getSkuList() != null && !goodsOperationDTO.getSkuList().isEmpty()) {
@@ -190,12 +190,12 @@ public class GoodsServiceImpl extends ServiceImpl<GoodsMapper, Goods> implements
                 }
             }
         }
-        
+
         // 如果总库存为0，强制设置为下架状态
         if (totalStock == 0) {
             goods.setMarketEnable(GoodsStatusEnum.DOWN.name());
         }
-        
+
         //添加商品
         this.save(goods);
         //添加商品sku信息
@@ -222,7 +222,7 @@ public class GoodsServiceImpl extends ServiceImpl<GoodsMapper, Goods> implements
         if (goodsOperationDTO.getGoodsParamsDTOList() != null && !goodsOperationDTO.getGoodsParamsDTOList().isEmpty()) {
             goods.setParams(JSON.toJSONString(goodsOperationDTO.getGoodsParamsDTOList()));
         }
-        
+
         // 检查库存，如果总库存为0则设置为下架状态
         int totalStock = 0;
         if (goodsOperationDTO.getSkuList() != null && !goodsOperationDTO.getSkuList().isEmpty()) {
@@ -233,12 +233,12 @@ public class GoodsServiceImpl extends ServiceImpl<GoodsMapper, Goods> implements
                 }
             }
         }
-        
+
         // 如果总库存为0，强制设置为下架状态
         if (totalStock == 0) {
             goods.setMarketEnable(GoodsStatusEnum.DOWN.name());
         }
-        
+
         //修改商品
         this.updateById(goods);
         //修改商品sku信息
@@ -305,7 +305,7 @@ public class GoodsServiceImpl extends ServiceImpl<GoodsMapper, Goods> implements
             goodsVO.setWholesaleList(wholesaleList);
         }
 
-        cache.put(CachePrefix.GOODS.getPrefix() + goodsId, goodsVO,7200L);
+        cache.put(CachePrefix.GOODS.getPrefix() + goodsId, goodsVO, 7200L);
         return goodsVO;
     }
 
@@ -317,20 +317,20 @@ public class GoodsServiceImpl extends ServiceImpl<GoodsMapper, Goods> implements
     @Override
     public GoodsNumVO getGoodsNumVO(GoodsSearchParams goodsSearchParams) {
         GoodsNumVO goodsNumVO = new GoodsNumVO();
-        
+
         // 获取基础查询条件
         QueryWrapper<Goods> baseWrapper = goodsSearchParams.queryWrapper();
-        
+
         // 使用聚合查询一次性获取所有状态的商品数量
         List<Map<String, Object>> results = this.baseMapper.selectMaps(
-            baseWrapper.select(
-                "COUNT(CASE WHEN auth_flag = 'PASS' AND market_enable = 'UPPER' THEN 1 END) as upperGoodsNum",
-                "COUNT(CASE WHEN auth_flag = 'PASS' AND market_enable = 'DOWN' THEN 1 END) as downGoodsNum",
-                "COUNT(CASE WHEN auth_flag = 'TOBEAUDITED' THEN 1 END) as auditGoodsNum",
-                "COUNT(CASE WHEN auth_flag = 'REFUSE' THEN 1 END) as refuseGoodsNum"
-            )
+                baseWrapper.select(
+                        "COUNT(CASE WHEN auth_flag = 'PASS' AND market_enable = 'UPPER' THEN 1 END) as upperGoodsNum",
+                        "COUNT(CASE WHEN auth_flag = 'PASS' AND market_enable = 'DOWN' THEN 1 END) as downGoodsNum",
+                        "COUNT(CASE WHEN auth_flag = 'TOBEAUDITED' THEN 1 END) as auditGoodsNum",
+                        "COUNT(CASE WHEN auth_flag = 'REFUSE' THEN 1 END) as refuseGoodsNum"
+                )
         );
-        
+
         if (!results.isEmpty()) {
             Map<String, Object> result = results.get(0);
             goodsNumVO.setUpperGoodsNum(((Number) result.get("upperGoodsNum")).intValue());
@@ -344,7 +344,7 @@ public class GoodsServiceImpl extends ServiceImpl<GoodsMapper, Goods> implements
             goodsNumVO.setAuditGoodsNum(0);
             goodsNumVO.setRefuseGoodsNum(0);
         }
-        
+
         return goodsNumVO;
     }
 
@@ -373,9 +373,8 @@ public class GoodsServiceImpl extends ServiceImpl<GoodsMapper, Goods> implements
             //删除之前的缓存
             goodsCacheKeys.add(CachePrefix.GOODS.getPrefix() + goodsId);
             //商品审核消息
-            String destination = "goods:" + "GOODS_AUDIT";
             //发送mq消息
-            messageQueueTemplate.send(destination, JSON.toJSONString(goods));
+            messageQueueTemplate.send(Topic.GOODS, GOODS_AUDIT.name(), goods);
         }
         cache.multiDel(goodsCacheKeys);
         return result;
@@ -556,7 +555,7 @@ public class GoodsServiceImpl extends ServiceImpl<GoodsMapper, Goods> implements
         this.goodsSkuService.updateGoodsSkuGrade(goodsId, grade, goods.getCommentNum());
 
         Map<String, Object> updateIndexFieldsMap = EsIndexUtil.getUpdateIndexFieldsMap(MapUtil.builder(new HashMap<String, Object>()).put("goodsId", goodsId).build(), MapUtil.builder(new HashMap<String, Object>()).put("commentNum", goods.getCommentNum()).put("highPraiseNum", highPraiseNum).put("grade", grade).build());
-        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("更新商品索引信息", "goods", "UPDATE_GOODS_INDEX_FIELD", JSON.toJSONString(updateIndexFieldsMap)));
+        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("更新商品索引信息", Topic.GOODS, UPDATE_GOODS_INDEX_FIELD.name(), updateIndexFieldsMap));
     }
 
     /**
@@ -632,7 +631,7 @@ public class GoodsServiceImpl extends ServiceImpl<GoodsMapper, Goods> implements
 
         //下架商品发送消息
         if (goodsStatusEnum.equals(GoodsStatusEnum.DOWN)) {
-            applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("下架商品", "goods", "DOWN", JSON.toJSONString(goodsIds)));
+            applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("下架商品", Topic.GOODS, DOWN.name(), goodsIds));
         }
     }
 
@@ -647,7 +646,7 @@ public class GoodsServiceImpl extends ServiceImpl<GoodsMapper, Goods> implements
         if (!GoodsStatusEnum.UPPER.name().equals(goods.getMarketEnable()) || !GoodsAuthEnum.PASS.name().equals(goods.getAuthFlag())) {
             return;
         }
-        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("生成商品", "goods", "GENERATOR_GOODS_INDEX", goods.getId()));
+        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("生成商品", Topic.GOODS, "GENERATOR_GOODS_INDEX", goods.getId()));
     }
 
     /**
@@ -657,7 +656,7 @@ public class GoodsServiceImpl extends ServiceImpl<GoodsMapper, Goods> implements
      */
     @Transactional
     public void updateEsGoods(List<String> goodsIds) {
-        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("更新商品", "goods", "UPDATE_GOODS_INDEX", goodsIds));
+        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("更新商品", Topic.GOODS, "UPDATE_GOODS_INDEX", goodsIds));
     }
 
     /**
@@ -667,7 +666,7 @@ public class GoodsServiceImpl extends ServiceImpl<GoodsMapper, Goods> implements
      */
     @Transactional
     public void deleteEsGoods(List<String> goodsIds) {
-        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("删除商品", "goods", "GOODS_DELETE", JSON.toJSONString(goodsIds)));
+        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("删除商品", Topic.GOODS, "GOODS_DELETE", JSON.toJSONString(goodsIds)));
     }
 
     /**

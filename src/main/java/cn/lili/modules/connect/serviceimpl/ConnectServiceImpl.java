@@ -5,6 +5,7 @@ import cn.hutool.core.util.StrUtil;
 import cn.lili.common.enums.ClientTypeEnum;
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.exception.ServiceException;
+import cn.lili.common.message.Topic;
 import cn.lili.common.security.AuthUser;
 import cn.lili.common.security.context.UserContext;
 import cn.lili.common.security.token.Token;
@@ -50,6 +51,8 @@ import java.nio.charset.StandardCharsets;
 import java.security.AlgorithmParameters;
 import java.security.Security;
 import java.util.*;
+
+import static cn.lili.rocketmq.tags.MemberTagsEnum.MEMBER_CONNECT_LOGIN;
 
 /**
  * 联合登陆接口实现
@@ -305,10 +308,8 @@ public class ConnectServiceImpl extends ServiceImpl<ConnectMapper, Connect> impl
             MemberConnectLoginMessage memberConnectLoginMessage = new MemberConnectLoginMessage();
             memberConnectLoginMessage.setMember(member);
             memberConnectLoginMessage.setConnectAuthUser(authUser);
-            String destination =
-                    "member:" + "MEMBER_CONNECT_LOGIN";
             //发送用户第三方登录消息
-            messageQueueTemplate.send(destination, JSON.toJSONString(memberConnectLoginMessage));
+            messageQueueTemplate.send(Topic.MEMBER, MEMBER_CONNECT_LOGIN.name(), JSON.toJSONString(memberConnectLoginMessage));
 
             return memberTokenGenerate.createToken(member, longTerm);
         } catch (Exception e) {

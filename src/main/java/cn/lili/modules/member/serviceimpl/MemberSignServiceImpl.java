@@ -3,6 +3,7 @@ package cn.lili.modules.member.serviceimpl;
 import cn.hutool.core.util.ObjectUtil;
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.exception.ServiceException;
+import cn.lili.common.message.Topic;
 import cn.lili.common.security.AuthUser;
 import cn.lili.common.security.context.UserContext;
 import cn.lili.common.utils.CurrencyUtil;
@@ -17,6 +18,7 @@ import cn.lili.modules.system.entity.dto.PointSetting;
 import cn.lili.modules.system.entity.dto.PointSettingItem;
 import cn.lili.modules.system.entity.enums.SettingEnum;
 import cn.lili.modules.system.service.SettingService;
+import cn.lili.rocketmq.tags.MemberTagsEnum;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.google.gson.Gson;
@@ -85,8 +87,7 @@ public class MemberSignServiceImpl extends ServiceImpl<MemberSignMapper, MemberS
             try {
                 this.baseMapper.insert(memberSign);
                 //签到成功后发送消息赠送积分
-                String destination = "member:" + "MEMBER_SIGN";
-                messageQueueTemplate.send(destination, memberSign);
+                messageQueueTemplate.send(Topic.MEMBER, MemberTagsEnum.MEMBER_SING.name(), memberSign);
                 return true;
             } catch (Exception e) {
                 throw new ServiceException(ResultCode.MEMBER_SIGN_REPEAT);

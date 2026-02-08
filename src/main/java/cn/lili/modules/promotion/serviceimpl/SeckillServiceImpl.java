@@ -7,6 +7,7 @@ import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.map.MapBuilder;
 import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.core.util.ArrayUtil;
+import cn.lili.common.message.Topic;
 import com.alibaba.fastjson2.JSON;
 import cn.lili.common.enums.PromotionTypeEnum;
 import cn.lili.common.enums.ResultCode;
@@ -192,9 +193,8 @@ public class SeckillServiceImpl extends AbstractPromotionsServiceImpl<SeckillMap
     public void deleteEsGoodsSeckill(Seckill seckill, List<String> skuIds) {
         Map<Object, Object> build = MapBuilder.create().put("promotionKey", this.getPromotionType() + "-" + seckill.getId()).put("scopeId", ArrayUtil.join(skuIds.toArray(), ",")).build();
         //删除商品促销消息
-        String destination = "goods_topic" + ":" + GoodsTagsEnum.DELETE_GOODS_INDEX_PROMOTIONS.name();
         //发送mq消息
-        messageQueueTemplate.send(destination, JSON.toJSONString(build));
+        messageQueueTemplate.send(Topic.GOODS,GoodsTagsEnum.DELETE_GOODS_INDEX_PROMOTIONS.name(), build);
     }
 
     @Override

@@ -2,6 +2,7 @@ package cn.lili.modules.promotion.serviceimpl;
 
 import cn.hutool.core.map.MapBuilder;
 import cn.hutool.core.text.CharSequenceUtil;
+import cn.lili.common.message.Topic;
 import com.alibaba.fastjson2.JSON;
 import cn.lili.common.enums.PromotionTypeEnum;
 import cn.lili.common.enums.ResultCode;
@@ -293,7 +294,7 @@ public class CouponServiceImpl extends AbstractPromotionsServiceImpl<CouponMappe
                 build.put("scopeId", promotions.getScopeId());
             }
             //删除商品促销消息
-            applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("删除商品促销事件", "goods-topic", GoodsTagsEnum.DELETE_GOODS_INDEX_PROMOTIONS.name(), JSON.toJSONString(build)));
+            applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("删除商品促销事件", Topic.GOODS, GoodsTagsEnum.DELETE_GOODS_INDEX_PROMOTIONS.name(), JSON.toJSONString(build)));
         } else {
             super.sendUpdateEsGoodsMsg(promotions);
         }

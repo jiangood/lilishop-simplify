@@ -4,6 +4,7 @@ import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.json.JSONUtil;
 import cn.lili.cache.Cache;
 import cn.lili.cache.CachePrefix;
+import cn.lili.common.message.Topic;
 import cn.lili.common.security.enums.UserEnums;
 import cn.lili.common.utils.SnowFlake;
 import cn.lili.consumer.event.OrderStatusChangeEvent;
@@ -36,6 +37,8 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import static cn.lili.rocketmq.tags.OrderTagsEnum.STATUS_CHANGE;
 
 /**
  * 订单状态处理类
@@ -240,8 +243,7 @@ public class FullDiscountExecute implements TradeEvent, OrderStatusChangeEvent {
         orderMessage.setPaymentMethod(order.getPaymentMethod());
         orderMessage.setNewStatus(OrderStatusEnum.PAID);
 
-        String destination = "order:" + "STATUS_CHANGE";
         //发送订单变更mq消息
-        messageQueueTemplate.send(destination, JSONUtil.toJsonStr(orderMessage));
+        messageQueueTemplate.send(Topic.ORDER, STATUS_CHANGE.name(),orderMessage);
     }
 }

@@ -12,6 +12,7 @@ import cn.lili.common.enums.SwitchEnum;
 import cn.lili.common.event.TransactionCommitSendMessageEvent;
 import cn.lili.common.exception.ServiceException;
 
+import cn.lili.common.message.Topic;
 import cn.lili.common.security.AuthUser;
 import cn.lili.common.security.context.UserContext;
 import cn.lili.common.security.enums.UserEnums;
@@ -61,6 +62,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+
+import static cn.lili.rocketmq.tags.MemberTagsEnum.MEMBER_INFO_EDIT;
 
 /**
  * 会员接口业务层实现
@@ -318,7 +321,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
         this.save(member);
         UserContext.settingInviter(member.getId(), cache);
         // 发送会员注册信息
-        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("new member register", "member", "MEMBER_REGISTER", member));
+        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("new member register", Topic.MEMBER, "MEMBER_REGISTER", member));
     }
 
     @Override
@@ -329,9 +332,8 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
         BeanUtil.copyProperties(memberEditDTO, member);
         //修改会员
         this.updateById(member);
-        String destination = "member:" + "MEMBER_INFO_EDIT";
         //发送订单变更mq消息
-        messageQueueTemplate.send(destination, member);
+        messageQueueTemplate.send(Topic.MEMBER,MEMBER_INFO_EDIT.name(),  member);
         return member;
     }
 
@@ -545,7 +547,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
                 memberPointMessage.setPoint(point);
                 memberPointMessage.setType(type);
                 memberPointMessage.setMemberId(memberId);
-                applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("update member point", "member", "MEMBER_POINT_CHANGE", memberPointMessage));
+                applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("update member point", Topic.MEMBER, "MEMBER_POINT_CHANGE", memberPointMessage));
                 return true;
             }
             return false;

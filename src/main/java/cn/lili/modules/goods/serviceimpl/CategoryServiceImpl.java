@@ -6,6 +6,7 @@ import cn.lili.cache.CachePrefix;
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.event.TransactionCommitSendMessageEvent;
 import cn.lili.common.exception.ServiceException;
+import cn.lili.common.message.Topic;
 import cn.lili.modules.goods.entity.dos.Category;
 import cn.lili.modules.goods.entity.dto.CategorySearchParams;
 import cn.lili.modules.goods.entity.vos.CategoryVO;
@@ -62,12 +63,6 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> i
 
     @Autowired
     private ApplicationEventPublisher applicationEventPublisher;
-
-    /**
-     * rocketMq
-     */
-    @Autowired
-    private MessageQueueTemplate messageQueueTemplate;
 
     @Override
     public List<Category> dbList(String parentId) {
@@ -258,7 +253,7 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> i
         updateWrapper.eq("id", category.getId());
         this.baseMapper.update(category, updateWrapper);
         removeCache();
-        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("同步商品分类名称", "goods-topic",
+        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("同步商品分类名称", Topic.GOODS,
                GoodsTagsEnum.CATEGORY_GOODS_NAME.name(), category.getId()));
     }
 

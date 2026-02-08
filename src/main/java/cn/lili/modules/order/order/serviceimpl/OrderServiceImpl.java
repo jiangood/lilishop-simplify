@@ -14,6 +14,8 @@ import cn.lili.common.enums.PromotionTypeEnum;
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.event.TransactionCommitSendMessageEvent;
 import cn.lili.common.exception.ServiceException;
+import cn.lili.common.message.Topic;
+import cn.lili.common.message.queue.template.MessageQueueTemplate;
 import cn.lili.common.security.OperationalJudgment;
 import cn.lili.common.security.context.UserContext;
 import cn.lili.common.security.enums.UserEnums;
@@ -60,13 +62,14 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import jakarta.servlet.ServletOutputStream;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.util.CellRangeAddressList;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import cn.lili.common.message.queue.template.MessageQueueTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
@@ -74,12 +77,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import jakarta.servlet.ServletOutputStream;
-import jakarta.servlet.http.HttpServletResponse;
 import java.io.InputStream;
 import java.net.URLEncoder;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static cn.lili.rocketmq.tags.GoodsTagsEnum.BUY_GOODS_COMPLETE;
 
 /**
  * 子订单业务层实现
@@ -351,7 +354,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             //修改订单
             this.updateById(order);
             //订单货物设置全部退款
-            orderItemService.update(new LambdaUpdateWrapper<OrderItem>().eq(OrderItem::getOrderSn,orderSn).set(OrderItem::getIsRefund,RefundStatusEnum.ALL_REFUND.name()));
+            orderItemService.update(new LambdaUpdateWrapper<OrderItem>().eq(OrderItem::getOrderSn, orderSn).set(OrderItem::getIsRefund, RefundStatusEnum.ALL_REFUND.name()));
             //生成店铺退款流水
             storeFlowService.orderCancel(orderSn);
             //发送消息
@@ -372,7 +375,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         order.setCancelReason(reason);
         this.updateById(order);
         //订单货物设置全部退款
-        orderItemService.update(new LambdaUpdateWrapper<OrderItem>().eq(OrderItem::getOrderSn,orderSn).set(OrderItem::getIsRefund,RefundStatusEnum.ALL_REFUND.name()));
+        orderItemService.update(new LambdaUpdateWrapper<OrderItem>().eq(OrderItem::getOrderSn, orderSn).set(OrderItem::getIsRefund, RefundStatusEnum.ALL_REFUND.name()));
         if (refundMoney) {
             //生成店铺退款流水
             storeFlowService.orderCancel(orderSn);
@@ -630,9 +633,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         }
         //发送商品购买消息
         if (!goodsCompleteMessageList.isEmpty()) {
-            String destination = "goods:" + "BUY_GOODS_COMPLETE";
             //发送订单变更mq消息
-            messageQueueTemplate.send(destination, JSONUtil.toJsonStr(goodsCompleteMessageList));
+            messageQueueTemplate.send(Topic.GOODS, BUY_GOODS_COMPLETE.name(), goodsCompleteMessageList);
         }
     }
 
@@ -645,7 +647,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void sendUpdateStatusMessage(OrderMessage orderMessage) {
-        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("发送订单变更mq消息", "order-topic",
+        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("发送订单变更mq消息", Topic.ORDER,
                 OrderTagsEnum.STATUS_CHANGE.name(), JSONUtil.toJsonStr(orderMessage)));
     }
 
@@ -912,7 +914,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         //是否全部发货
         if (delivery) {
             return delivery(orderSn, invoiceNumber, logisticsId);
-        }else if(order.getDeliverStatus().equals(DeliverStatusEnum.UNDELIVERED.name()) || order.getOrderStatus().equals(OrderStatusEnum.UNDELIVERED.name())){
+        } else if (order.getDeliverStatus().equals(DeliverStatusEnum.UNDELIVERED.name()) || order.getOrderStatus().equals(OrderStatusEnum.UNDELIVERED.name())) {
             //更改订单状态为部分发货
             order.setDeliverStatus(DeliverStatusEnum.PARTS_DELIVERED.name());
             order.setOrderStatus(OrderStatusEnum.PARTS_DELIVERED.name());
@@ -1049,7 +1051,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
                     startTime,
                     pintuanOrderMessage,
                     DelayQueueTools.wrapperUniqueKey(DelayTypeEnums.PINTUAN_ORDER, (pintuanId + parentOrderSn)),
-                    "promotion-topic");
+                    Topic.PROMOTION);
 
             this.timeTrigger.addDelay(timeTriggerMsg);
         }
@@ -1246,7 +1248,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             if (StrUtil.isNotBlank(orderExportDTO.getConsigneeAddressPath())) {
                 String[] receiveAddress = orderExportDTO.getConsigneeAddressPath().split(",");
                 orderExportDetailDTO.setProvince(receiveAddress[0]);
-                orderExportDetailDTO.setCity(receiveAddress.length > 1 ?receiveAddress[1]:"");
+                orderExportDetailDTO.setCity(receiveAddress.length > 1 ? receiveAddress[1] : "");
                 orderExportDetailDTO.setDistrict(receiveAddress.length > 2 ? receiveAddress[2] : "");
                 orderExportDetailDTO.setStreet(receiveAddress.length > 3 ? receiveAddress[3] : "");
             }
@@ -1289,13 +1291,13 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             row.createCell(2).setCellValue(dto.getGoodsName());
             row.createCell(3).setCellValue(dto.getNum());
             row.createCell(4).setCellValue(dto.getGoodsId());
-            row.createCell(5).setCellValue(Objects.nonNull(dto.getUnitPrice())?dto.getUnitPrice():0);
-            row.createCell(6).setCellValue(Objects.nonNull(dto.getFlowPrice())?dto.getFlowPrice():0);
-            row.createCell(7).setCellValue(Objects.nonNull(dto.getFreightPrice())?dto.getFreightPrice():0);
-            row.createCell(8).setCellValue(Objects.nonNull(dto.getDiscountPrice())?dto.getDiscountPrice():0);
-            row.createCell(9).setCellValue(Objects.nonNull(dto.getSiteMarketingCost())?dto.getSiteMarketingCost():0);
-            row.createCell(10).setCellValue(Objects.nonNull(dto.getStoreMarketingCost())?dto.getStoreMarketingCost():0);
-            row.createCell(11).setCellValue(Objects.nonNull(dto.getUpdatePrice())?dto.getUpdatePrice():0);
+            row.createCell(5).setCellValue(Objects.nonNull(dto.getUnitPrice()) ? dto.getUnitPrice() : 0);
+            row.createCell(6).setCellValue(Objects.nonNull(dto.getFlowPrice()) ? dto.getFlowPrice() : 0);
+            row.createCell(7).setCellValue(Objects.nonNull(dto.getFreightPrice()) ? dto.getFreightPrice() : 0);
+            row.createCell(8).setCellValue(Objects.nonNull(dto.getDiscountPrice()) ? dto.getDiscountPrice() : 0);
+            row.createCell(9).setCellValue(Objects.nonNull(dto.getSiteMarketingCost()) ? dto.getSiteMarketingCost() : 0);
+            row.createCell(10).setCellValue(Objects.nonNull(dto.getStoreMarketingCost()) ? dto.getStoreMarketingCost() : 0);
+            row.createCell(11).setCellValue(Objects.nonNull(dto.getUpdatePrice()) ? dto.getUpdatePrice() : 0);
             row.createCell(12).setCellValue(dto.getPaymentMethod());
             row.createCell(13).setCellValue(dto.getConsigneeName());
             row.createCell(14).setCellValue(dto.getConsigneeMobile());

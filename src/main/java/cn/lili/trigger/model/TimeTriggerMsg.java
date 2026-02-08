@@ -1,5 +1,6 @@
 package cn.lili.trigger.model;
 
+import cn.lili.common.message.Topic;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -45,6 +46,6 @@ public class TimeTriggerMsg implements Serializable {
     /**
      * 信息队列主题
      */
-    private String topic;
+    private Topic topic;
 
 }

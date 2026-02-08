@@ -2,6 +2,7 @@ package cn.lili.trigger.interfaces.impl;
 
 import cn.hutool.json.JSONUtil;
 import cn.lili.cache.Cache;
+import cn.lili.common.message.Topic;
 import cn.lili.common.message.queue.template.MessageQueueTemplate;
 import cn.lili.trigger.delay.queue.PromotionDelayQueue;
 import cn.lili.trigger.interfaces.TimeTrigger;
@@ -75,22 +76,21 @@ public class RocketmqTimerTrigger implements TimeTrigger {
      *                     业务内全局唯一
      * @param topic        rocketmq topic
      */
-    private void addExecute(String executorName, Object param, Long triggerTime, String uniqueKey, String topic) {
-
+    private void addExecute(String executorName, Object param, Long triggerTime, String uniqueKey, Topic topic) {
         TimeTriggerMsg timeTriggerMsg = new TimeTriggerMsg(executorName, triggerTime, param, uniqueKey, topic);
         Message<TimeTriggerMsg> message = MessageBuilder.withPayload(timeTriggerMsg).build();
         log.info("延时任务发送信息：{}", message);
-        this.messageQueueTemplate.send(topic, message);
+        this.messageQueueTemplate.send(topic, null, message);
     }
 
     @Override
-    public void edit(String executorName, Object param, Long oldTriggerTime, Long triggerTime, String uniqueKey, int delayTime, String topic) {
+    public void edit(String executorName, Object param, Long oldTriggerTime, Long triggerTime, String uniqueKey, int delayTime, Topic topic) {
         this.delete(executorName, oldTriggerTime, uniqueKey, topic);
         this.addDelay(new TimeTriggerMsg(executorName, triggerTime, param, uniqueKey, topic));
     }
 
     @Override
-    public void delete(String executorName, Long triggerTime, String uniqueKey, String topic) {
+    public void delete(String executorName, Long triggerTime, String uniqueKey, Topic topic) {
         String generateKey = DelayQueueTools.generateKey(executorName, triggerTime, uniqueKey);
         log.info("删除延时任务{}", generateKey);
         this.cache.remove(generateKey);

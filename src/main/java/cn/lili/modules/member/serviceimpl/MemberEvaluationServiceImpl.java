@@ -8,6 +8,7 @@ import cn.lili.common.enums.ResultCode;
 import cn.lili.common.enums.SwitchEnum;
 import cn.lili.common.event.TransactionCommitSendMessageEvent;
 import cn.lili.common.exception.ServiceException;
+import cn.lili.common.message.Topic;
 import cn.lili.common.security.context.UserContext;
 import cn.lili.common.security.enums.UserEnums;
 import cn.lili.common.sensitive.SensitiveWordsFilter;
@@ -145,7 +146,7 @@ public class MemberEvaluationServiceImpl extends ServiceImpl<MemberEvaluationMap
         orderItemService.updateCommentStatus(orderItem.getSn(), CommentStatusEnum.FINISHED);
         //发送商品评价消息
         applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("同步商品评价消息",
-                "goods-topic", GoodsTagsEnum.GOODS_COMMENT_COMPLETE.name(), JSONUtil.toJsonStr(memberEvaluation)));
+                Topic.GOODS, GoodsTagsEnum.GOODS_COMMENT_COMPLETE.name(), JSONUtil.toJsonStr(memberEvaluation)));
         return memberEvaluationDTO;
     }
 

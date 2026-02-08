@@ -2,6 +2,8 @@ package cn.lili.modules.promotion.serviceimpl;
 
 import cn.hutool.core.map.MapUtil;
 import cn.hutool.core.text.CharSequenceUtil;
+import cn.lili.common.message.Topic;
+import cn.lili.rocketmq.tags.GoodsTagsEnum;
 import com.alibaba.fastjson2.JSON;
 import cn.lili.common.enums.PromotionTypeEnum;
 import cn.lili.common.enums.ResultCode;
@@ -222,8 +224,7 @@ public class PointsGoodsServiceImpl extends AbstractPromotionsServiceImpl<Points
         Map<String, Object> update = MapUtil.builder(new HashMap<String, Object>()).put("points", promotions.getPoints()).build();
         //修改规格索引,发送mq消息
         Map<String, Object> updateIndexFieldsMap = EsIndexUtil.getUpdateIndexFieldsMap(query, update);
-        String destination = "goods:" + "UPDATE_GOODS_INDEX_FIELD";
-        messageQueueTemplate.send(destination, JSON.toJSONString(updateIndexFieldsMap));
+        messageQueueTemplate.send(Topic.GOODS, GoodsTagsEnum.UPDATE_GOODS_INDEX_FIELD.name(),updateIndexFieldsMap);
     }
 
 
