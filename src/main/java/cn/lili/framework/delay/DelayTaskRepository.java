@@ -1,6 +1,5 @@
 package cn.lili.framework.delay;
 
-import cn.lili.framework.delay.DelayTask;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;

@@ -20,7 +20,6 @@ public class MessageQueueTemplate {
     public void send(Topic topic, String tag, Object message) {
         try {
             messageQueueService.send(topic, tag, message);
-
             log.info("Message sent synchronously: {} {}", topic, tag);
         } catch (Exception e) {
             log.error("Failed to send message synchronously: {}", e.getMessage(), e);
