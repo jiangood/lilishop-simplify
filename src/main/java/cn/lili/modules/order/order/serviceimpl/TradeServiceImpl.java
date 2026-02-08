@@ -4,7 +4,7 @@ import cn.hutool.json.JSONUtil;
 import cn.lili.cache.Cache;
 import cn.lili.cache.CachePrefix;
 import cn.lili.common.enums.ResultCode;
-import cn.lili.common.event.TransactionCommitSendMessageEvent;
+import cn.lili.framework.queue.TransactionCommitSendMessageEvent;
 import cn.lili.common.exception.ServiceException;
 import cn.lili.common.message.Topic;
 import cn.lili.modules.goods.entity.enums.GoodsTypeEnum;
@@ -109,7 +109,7 @@ public class TradeServiceImpl extends ServiceImpl<TradeMapper, Trade> implements
         kanjiaPretreatment(tradeDTO);
         //写入缓存，给消费者调用
         cache.put(key, JSONUtil.toJsonStr(tradeDTO));
-        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("订单创建消息", Topic.ORDER,
+        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(Topic.ORDER,
                 OrderTagsEnum.ORDER_CREATE.name(), key));
         return trade;
     }

@@ -6,7 +6,7 @@ import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.json.JSONUtil;
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.enums.SwitchEnum;
-import cn.lili.common.event.TransactionCommitSendMessageEvent;
+import cn.lili.framework.queue.TransactionCommitSendMessageEvent;
 import cn.lili.common.exception.ServiceException;
 import cn.lili.common.message.Topic;
 import cn.lili.common.security.context.UserContext;
@@ -145,7 +145,7 @@ public class MemberEvaluationServiceImpl extends ServiceImpl<MemberEvaluationMap
         //修改订单货物评价状态为已评价
         orderItemService.updateCommentStatus(orderItem.getSn(), CommentStatusEnum.FINISHED);
         //发送商品评价消息
-        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("同步商品评价消息",
+        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(
                 Topic.GOODS, GoodsTagsEnum.GOODS_COMMENT_COMPLETE.name(), JSONUtil.toJsonStr(memberEvaluation)));
         return memberEvaluationDTO;
     }

@@ -4,7 +4,7 @@ import cn.hutool.core.text.CharSequenceUtil;
 import cn.lili.cache.Cache;
 import cn.lili.cache.CachePrefix;
 import cn.lili.common.enums.ResultCode;
-import cn.lili.common.event.TransactionCommitSendMessageEvent;
+import cn.lili.framework.queue.TransactionCommitSendMessageEvent;
 import cn.lili.common.exception.ServiceException;
 import cn.lili.common.message.Topic;
 import cn.lili.modules.goods.entity.dos.Category;
@@ -252,7 +252,7 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> i
         updateWrapper.eq("id", category.getId());
         this.baseMapper.update(category, updateWrapper);
         removeCache();
-        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("同步商品分类名称", Topic.GOODS,
+        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(Topic.GOODS,
                GoodsTagsEnum.CATEGORY_GOODS_NAME.name(), category.getId()));
     }
 

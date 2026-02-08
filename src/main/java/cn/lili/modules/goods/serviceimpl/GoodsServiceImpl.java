@@ -7,7 +7,7 @@ import cn.hutool.core.util.NumberUtil;
 import cn.lili.cache.Cache;
 import cn.lili.cache.CachePrefix;
 import cn.lili.common.enums.ResultCode;
-import cn.lili.common.event.TransactionCommitSendMessageEvent;
+import cn.lili.framework.queue.TransactionCommitSendMessageEvent;
 import cn.lili.common.exception.ServiceException;
 import cn.lili.common.message.Topic;
 import cn.lili.framework.queue.MessageQueueTemplate;
@@ -136,7 +136,7 @@ public class GoodsServiceImpl extends ServiceImpl<GoodsMapper, Goods> implements
         //下架店铺下的商品
         this.updateGoodsMarketAbleByStoreId(storeId, GoodsStatusEnum.DOWN, "店铺关闭");
 
-        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("下架商品", Topic.GOODS, DOWN.name(), list));
+        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(Topic.GOODS, DOWN.name(), list));
 
     }
 
@@ -555,7 +555,7 @@ public class GoodsServiceImpl extends ServiceImpl<GoodsMapper, Goods> implements
         this.goodsSkuService.updateGoodsSkuGrade(goodsId, grade, goods.getCommentNum());
 
         Map<String, Object> updateIndexFieldsMap = EsIndexUtil.getUpdateIndexFieldsMap(MapUtil.builder(new HashMap<String, Object>()).put("goodsId", goodsId).build(), MapUtil.builder(new HashMap<String, Object>()).put("commentNum", goods.getCommentNum()).put("highPraiseNum", highPraiseNum).put("grade", grade).build());
-        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("更新商品索引信息", Topic.GOODS, UPDATE_GOODS_INDEX_FIELD.name(), updateIndexFieldsMap));
+        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(Topic.GOODS, UPDATE_GOODS_INDEX_FIELD.name(), updateIndexFieldsMap));
     }
 
     /**
@@ -631,7 +631,7 @@ public class GoodsServiceImpl extends ServiceImpl<GoodsMapper, Goods> implements
 
         //下架商品发送消息
         if (goodsStatusEnum.equals(GoodsStatusEnum.DOWN)) {
-            applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("下架商品", Topic.GOODS, DOWN.name(), goodsIds));
+            applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(Topic.GOODS, DOWN.name(), goodsIds));
         }
     }
 
@@ -646,7 +646,7 @@ public class GoodsServiceImpl extends ServiceImpl<GoodsMapper, Goods> implements
         if (!GoodsStatusEnum.UPPER.name().equals(goods.getMarketEnable()) || !GoodsAuthEnum.PASS.name().equals(goods.getAuthFlag())) {
             return;
         }
-        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("生成商品", Topic.GOODS, "GENERATOR_GOODS_INDEX", goods.getId()));
+        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(Topic.GOODS, "GENERATOR_GOODS_INDEX", goods.getId()));
     }
 
     /**
@@ -656,7 +656,7 @@ public class GoodsServiceImpl extends ServiceImpl<GoodsMapper, Goods> implements
      */
     @Transactional
     public void updateEsGoods(List<String> goodsIds) {
-        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("更新商品", Topic.GOODS, "UPDATE_GOODS_INDEX", goodsIds));
+        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(Topic.GOODS, "UPDATE_GOODS_INDEX", goodsIds));
     }
 
     /**
@@ -666,7 +666,7 @@ public class GoodsServiceImpl extends ServiceImpl<GoodsMapper, Goods> implements
      */
     @Transactional
     public void deleteEsGoods(List<String> goodsIds) {
-        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("删除商品", Topic.GOODS, "GOODS_DELETE", JSON.toJSONString(goodsIds)));
+        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(Topic.GOODS, "GOODS_DELETE", JSON.toJSONString(goodsIds)));
     }
 
     /**

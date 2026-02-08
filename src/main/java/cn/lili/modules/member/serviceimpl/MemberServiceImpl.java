@@ -9,7 +9,7 @@ import cn.lili.common.aop.annotation.DemoSite;
 import cn.lili.common.context.ThreadContextHolder;
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.enums.SwitchEnum;
-import cn.lili.common.event.TransactionCommitSendMessageEvent;
+import cn.lili.framework.queue.TransactionCommitSendMessageEvent;
 import cn.lili.common.exception.ServiceException;
 
 import cn.lili.common.message.Topic;
@@ -322,7 +322,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
         this.save(member);
         UserContext.settingInviter(member.getId(), cache);
         // 发送会员注册信息
-        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("new member register", Topic.MEMBER, MEMBER_REGISTER.name(), member));
+        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(Topic.MEMBER, MEMBER_REGISTER.name(), member));
     }
 
     @Override
@@ -548,7 +548,7 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
                 memberPointMessage.setPoint(point);
                 memberPointMessage.setType(type);
                 memberPointMessage.setMemberId(memberId);
-                applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("update member point", Topic.MEMBER, "MEMBER_POINT_CHANGE", memberPointMessage));
+                applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(Topic.MEMBER, "MEMBER_POINT_CHANGE", memberPointMessage));
                 return true;
             }
             return false;

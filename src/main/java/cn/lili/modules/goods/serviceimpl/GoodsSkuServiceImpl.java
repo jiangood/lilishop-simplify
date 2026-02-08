@@ -7,7 +7,7 @@ import cn.lili.cache.Cache;
 import cn.lili.cache.CachePrefix;
 import cn.lili.common.enums.PromotionTypeEnum;
 import cn.lili.common.enums.ResultCode;
-import cn.lili.common.event.TransactionCommitSendMessageEvent;
+import cn.lili.framework.queue.TransactionCommitSendMessageEvent;
 import cn.lili.common.exception.ServiceException;
 
 import cn.lili.common.message.Topic;
@@ -413,12 +413,12 @@ public class GoodsSkuServiceImpl extends ServiceImpl<GoodsSkuMapper, GoodsSku> i
         boolean update = this.update(updateWrapper);
         if (Boolean.TRUE.equals(update)) {
             if (GoodsStatusEnum.UPPER.name().equals(marketEnable)) {
-                applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("生成店铺商品",
+                applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(
                         Topic.GOODS, GENERATOR_STORE_GOODS_INDEX.name(),
                         storeId));
             } else if (GoodsStatusEnum.DOWN.name().equals(marketEnable)) {
                 cache.vagueDel(CachePrefix.GOODS_SKU.getPrefix());
-                applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("删除店铺商品",
+                applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(
                         Topic.GOODS, STORE_GOODS_DELETE.name(), storeId));
             }
         }
@@ -727,7 +727,7 @@ public class GoodsSkuServiceImpl extends ServiceImpl<GoodsSkuMapper, GoodsSku> i
             if (isFlag && quantity > 0 && CharSequenceUtil.equals(goodsSku.getMarketEnable(), GoodsStatusEnum.UPPER.name())) {
                 List<String> goodsIds = new ArrayList<>();
                 goodsIds.add(goodsSku.getGoodsId());
-                applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("更新商品", Topic.GOODS, UPDATE_GOODS_INDEX.name(), goodsIds));
+                applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(Topic.GOODS, UPDATE_GOODS_INDEX.name(), goodsIds));
             }
         }
     }
@@ -764,7 +764,7 @@ public class GoodsSkuServiceImpl extends ServiceImpl<GoodsSkuMapper, GoodsSku> i
             if (isFlag && quantity > 0 && CharSequenceUtil.equals(goodsSku.getMarketEnable(), GoodsStatusEnum.UPPER.name())) {
                 List<String> goodsIds = new ArrayList<>();
                 goodsIds.add(goodsSku.getGoodsId());
-                applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("更新商品", Topic.GOODS, UPDATE_GOODS_INDEX.name(), goodsIds));
+                applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(Topic.GOODS, UPDATE_GOODS_INDEX.name(), goodsIds));
             }
         }
     }

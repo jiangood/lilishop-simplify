@@ -5,7 +5,7 @@ import cn.hutool.core.map.MapBuilder;
 import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.json.JSONUtil;
 import cn.lili.common.enums.ResultCode;
-import cn.lili.common.event.TransactionCommitSendMessageEvent;
+import cn.lili.framework.queue.TransactionCommitSendMessageEvent;
 import cn.lili.common.exception.ServiceException;
 import cn.lili.common.message.Topic;
 import cn.lili.common.vo.PageVO;
@@ -256,7 +256,7 @@ public abstract class AbstractPromotionsServiceImpl<M extends BaseMapper<T>, T e
         if (promotions.getStartTime() == null && promotions.getEndTime() == null) {
             Map<Object, Object> build = MapBuilder.create().put("promotionKey", this.getPromotionType() + "-" + promotions.getId()).put("scopeId", promotions.getScopeId()).build();
             //删除商品促销消息
-            applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("删除商品促销事件", Topic.GOODS, GoodsTagsEnum.DELETE_GOODS_INDEX_PROMOTIONS.name(), build));
+            applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(Topic.GOODS, GoodsTagsEnum.DELETE_GOODS_INDEX_PROMOTIONS.name(), build));
         } else {
             this.sendUpdateEsGoodsMsg(promotions);
         }
@@ -274,7 +274,7 @@ public abstract class AbstractPromotionsServiceImpl<M extends BaseMapper<T>, T e
         map.put("promotionsType", promotions.getClass().getName());
         // 促销实体
         map.put("promotions", promotions);
-        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("更新商品索引促销事件", Topic.GOODS, GoodsTagsEnum.UPDATE_GOODS_INDEX_PROMOTIONS.name(), JSONUtil.toJsonStr(map)));
+        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(Topic.GOODS, GoodsTagsEnum.UPDATE_GOODS_INDEX_PROMOTIONS.name(), JSONUtil.toJsonStr(map)));
     }
 
     @Override

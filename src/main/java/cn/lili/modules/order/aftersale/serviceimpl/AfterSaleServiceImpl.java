@@ -3,7 +3,7 @@ package cn.lili.modules.order.aftersale.serviceimpl;
 import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.core.util.NumberUtil;
 import cn.lili.common.enums.ResultCode;
-import cn.lili.common.event.TransactionCommitSendMessageEvent;
+import cn.lili.framework.queue.TransactionCommitSendMessageEvent;
 import cn.lili.common.exception.ServiceException;
 import cn.lili.common.message.Topic;
 import cn.lili.common.security.AuthUser;
@@ -625,7 +625,7 @@ public class AfterSaleServiceImpl extends ServiceImpl<AfterSaleMapper, AfterSale
      */
     @Transactional(rollbackFor = Exception.class)
     public void sendAfterSaleMessage(AfterSale afterSale) {
-        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent("发送售后单状态变更MQ消息", Topic.AFTER_SALE,
+        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(Topic.AFTER_SALE,
                 AfterSaleTagsEnum.AFTER_SALE_STATUS_CHANGE.name(), afterSale));
     }
 
