@@ -1,6 +1,7 @@
 package cn.lili.consumer.listener;
 
 import cn.hutool.json.JSONUtil;
+import cn.lili.common.message.Topic;
 import cn.lili.common.message.queue.entity.MessageQueue;
 import cn.lili.common.message.queue.listener.MessageQueueListener;
 import cn.lili.consumer.event.*;
@@ -28,8 +29,8 @@ import java.util.List;
 public class MemberMessageListener implements MessageQueueListener {
 
     @Override
-    public String getTopic() {
-        return "member-topic";
+    public Topic getTopic() {
+        return Topic.MEMBER;
     }
     /**
      * 会员签到

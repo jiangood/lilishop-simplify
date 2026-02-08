@@ -2,6 +2,7 @@ package cn.lili.consumer.trigger;
 
 import cn.hutool.json.JSONUtil;
 import cn.lili.cache.Cache;
+import cn.lili.common.message.Topic;
 import cn.lili.common.message.queue.entity.MessageQueue;
 import cn.lili.common.message.queue.listener.MessageQueueListener;
 import cn.lili.trigger.model.TimeTriggerMsg;
@@ -24,8 +25,8 @@ public class TimeTriggerConsumer implements MessageQueueListener {
     private Cache<Integer> cache;
 
     @Override
-    public String getTopic() {
-        return "promotion-topic";
+    public Topic getTopic() {
+        return Topic.PROMOTION;
     }
 
     @Override

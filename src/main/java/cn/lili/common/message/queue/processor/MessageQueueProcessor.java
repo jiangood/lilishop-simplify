@@ -1,5 +1,6 @@
 package cn.lili.common.message.queue.processor;
 
+import cn.lili.common.message.Topic;
 import cn.lili.common.message.queue.entity.MessageQueue;
 import cn.lili.common.message.queue.listener.MessageQueueListener;
 import cn.lili.common.message.queue.service.MessageQueueService;
@@ -28,7 +29,7 @@ public class MessageQueueProcessor {
     private MessageQueueService messageQueueService;
 
 
-    private final Map<String, MessageQueueListener> listenerMap = new HashMap<>();
+    private final Map<Topic, MessageQueueListener> listenerMap = new HashMap<>();
 
     public MessageQueueProcessor(MessageQueueService messageQueueService, List<MessageQueueListener> messageQueueListeners) {
         this.messageQueueService = messageQueueService;
@@ -42,7 +43,7 @@ public class MessageQueueProcessor {
 
     }
 
-    private MessageQueueListener findByTopic(String topic) {
+    private MessageQueueListener findByTopic(Topic topic) {
         MessageQueueListener listener = listenerMap.get(topic);
         Assert.notNull(listener, "No listener found for topic: " + topic);
         return listener;
@@ -92,8 +93,7 @@ public class MessageQueueProcessor {
     private void processOne(MessageQueue message) {
         try {
             log.info("Processing message: id={}, topic={}, tag={}", message.getId(), message.getTopic(), message.getTag());
-
-            MessageQueueListener listener = this.findByTopic(message.getTopic());
+            MessageQueueListener listener = this.findByTopic(Topic.valueOf(message.getTopic()));
             listener.onMessage(message);
             messageQueueService.markAsProcessed(message.getId());
             log.info("Message processed successfully: id={}", message.getId());

@@ -1,5 +1,6 @@
 package cn.lili.common.message.queue.listener;
 
+import cn.lili.common.message.Topic;
 import cn.lili.common.message.queue.entity.MessageQueue;
 
 
@@ -17,6 +18,6 @@ public interface MessageQueueListener {
      *
      * @return Topic name
      */
-    String getTopic();
+    Topic getTopic();
 
 }

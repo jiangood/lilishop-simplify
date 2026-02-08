@@ -43,7 +43,7 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message> impl
         //保存站内信信息
         this.save(message);
         //发送站内信消息提醒
-        messageQueueTemplate.send(Topic.NOTICE, OtherTagsEnum.MESSAGE.name(), message);
+        messageQueueTemplate.send(Topic.NOTICE_SEND, OtherTagsEnum.MESSAGE.name(), message);
         return true;
     }
 

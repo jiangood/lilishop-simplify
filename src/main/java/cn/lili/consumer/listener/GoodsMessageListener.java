@@ -7,6 +7,7 @@ import cn.hutool.core.util.ArrayUtil;
 import cn.hutool.core.util.ClassLoaderUtil;
 import cn.lili.common.aop.annotation.RetryOperation;
 import cn.lili.common.exception.RetryException;
+import cn.lili.common.message.Topic;
 import cn.lili.common.message.queue.entity.MessageQueue;
 import cn.lili.common.message.queue.listener.MessageQueueListener;
 import cn.lili.common.vo.PageVO;
@@ -57,8 +58,8 @@ import java.util.stream.Collectors;
 public class GoodsMessageListener implements MessageQueueListener {
 
     @Override
-    public String getTopic() {
-        return "goods-topic";
+    public Topic getTopic() {
+        return Topic.GOODS;
     }
     private static final int BATCH_SIZE = 10;
 

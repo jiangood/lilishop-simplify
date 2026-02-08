@@ -1,12 +1,15 @@
 package cn.lili.consumer.listener;
 
 import cn.hutool.json.JSONUtil;
+import cn.lili.common.message.Topic;
 import cn.lili.common.message.queue.entity.MessageQueue;
 import cn.lili.common.message.queue.listener.MessageQueueListener;
 import cn.lili.modules.message.entity.dto.NoticeMessageDTO;
 import cn.lili.modules.message.service.NoticeMessageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+
+import static cn.lili.common.message.Topic.NOTICE;
 
 /**
  * 站内信通知
@@ -18,8 +21,8 @@ import org.springframework.stereotype.Component;
 public class NoticeMessageListener implements MessageQueueListener {
 
     @Override
-    public String getTopic() {
-        return "notice-topic";
+    public Topic getTopic() {
+        return NOTICE;
     }
 
     /**

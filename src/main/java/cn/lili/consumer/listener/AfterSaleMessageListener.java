@@ -1,6 +1,7 @@
 package cn.lili.consumer.listener;
 
 import cn.hutool.json.JSONUtil;
+import cn.lili.common.message.Topic;
 import cn.lili.common.message.queue.entity.MessageQueue;
 import cn.lili.common.message.queue.listener.MessageQueueListener;
 import cn.lili.consumer.event.AfterSaleStatusChangeEvent;
@@ -21,8 +22,8 @@ import java.util.List;
 @Component
 public class AfterSaleMessageListener implements MessageQueueListener {
     @Override
-    public String getTopic() {
-        return "after-sale-topic";
+    public Topic getTopic() {
+        return Topic.AFTER_SALE;
     }
 
     /**

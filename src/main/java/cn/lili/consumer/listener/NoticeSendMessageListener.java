@@ -2,6 +2,7 @@ package cn.lili.consumer.listener;
 
 import cn.hutool.json.JSONUtil;
 import cn.lili.common.enums.SwitchEnum;
+import cn.lili.common.message.Topic;
 import cn.lili.common.message.queue.entity.MessageQueue;
 import cn.lili.common.message.queue.listener.MessageQueueListener;
 import cn.lili.common.vo.PageVO;
@@ -38,8 +39,8 @@ import java.util.List;
 @Component
 public class NoticeSendMessageListener implements MessageQueueListener {
     @Override
-    public String getTopic() {
-        return "notice-send-topic";
+    public Topic getTopic() {
+        return Topic.NOTICE_SEND;
     }
 
     /**
