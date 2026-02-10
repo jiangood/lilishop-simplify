@@ -5,15 +5,15 @@ import cn.lili.api.manager.security.ManagerAuthenticationFilter;
 import cn.lili.api.seller.security.StoreAuthenticationFilter;
 import cn.lili.cache.Cache;
 import cn.lili.common.properties.IgnoredUrlsProperties;
-import cn.lili.common.security.CustomAccessDeniedHandler;
 import cn.lili.modules.member.service.ClerkService;
 import cn.lili.modules.member.service.StoreMenuRoleService;
 import cn.lili.modules.member.token.StoreTokenGenerate;
 import cn.lili.modules.permission.service.MenuService;
 import cn.lili.modules.system.token.ManagerTokenGenerate;
+import io.github.jiangood.openadmin.framework.config.init.OpenLifecycle;
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -21,10 +21,9 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.annotation.web.configurers.AuthorizeHttpRequestsConfigurer;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.annotation.web.configurers.LogoutConfigurer;
-import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfigurationSource;
 
 
@@ -32,7 +31,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
-public class GlobalSecurityConfig {
+public class GlobalSecurityConfig implements OpenLifecycle {
 
     /**
      * 忽略验权配置
@@ -40,11 +39,7 @@ public class GlobalSecurityConfig {
     @Autowired
     private IgnoredUrlsProperties ignoredUrlsProperties;
 
-    /**
-     * spring security -》 权限不足处理
-     */
-    @Autowired
-    private CustomAccessDeniedHandler accessDeniedHandler;
+
 
     @Autowired
     private Cache<String> cache;
@@ -68,26 +63,17 @@ public class GlobalSecurityConfig {
 
     @Autowired
     private ManagerTokenGenerate managerTokenGenerate;
-    // 新增：用于获取 AuthenticationManager
-    @Autowired
-    private AuthenticationConfiguration authenticationConfiguration;
 
-    /**
-     * 配置安全过滤器链
-     */
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        // 配置不需要授权的URL
+    @Override
+    public void onConfigSecurityAuthorizeHttpRequests(AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry authz) {
         String[] ignoredUrls = ignoredUrlsProperties.getUrls().toArray(new String[0]);
 
-        AuthenticationManager authenticationManager = authenticationConfiguration.getAuthenticationManager();
-        // 配置授权规则
-        http.authorizeHttpRequests(authz -> authz
-                // 配置的url不需要授权
-                .requestMatchers(ignoredUrls).permitAll()
-                // 任何其他请求都需要身份认证
-                .anyRequest().authenticated()
-        );
+        authz.requestMatchers(ignoredUrls).permitAll();
+    }
+
+    @Override
+    public void onConfigSecurity(HttpSecurity http, AuthenticationManager authenticationManager) throws Exception {
+
         // 禁止网页iframe
         http.headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::disable));
         // 配置登出
@@ -97,44 +83,17 @@ public class GlobalSecurityConfig {
         http.cors(cors -> cors.configurationSource(corsConfigurationSource));
         // 关闭跨站请求防护
         http.csrf(AbstractHttpConfigurer::disable);
-        // 前后端分离采用JWT，不需要session
-        http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-        // 自定义权限拒绝处理类
-        http.exceptionHandling(exception -> exception
-                .accessDeniedHandler(accessDeniedHandler)
-                .authenticationEntryPoint((req, res, ex) ->
-                        cn.lili.common.utils.ResponseUtil.output(res, 403,
-                                cn.lili.common.utils.ResponseUtil.resultMap(false, 403, "未登录或token失效"))
-                )
-        );
 
 
-        // 禁用表单与Basic认证
-        http.formLogin(AbstractHttpConfigurer::disable);
-        http.httpBasic(AbstractHttpConfigurer::disable);
         // 添加JWT认证过滤器
         http.addFilter(new BuyerAuthenticationFilter(authenticationManager, cache));
         http.addFilter(new StoreAuthenticationFilter(authenticationManager, storeTokenGenerate, storeMenuRoleService, clerkService, cache));
+
         http.addFilter(new ManagerAuthenticationFilter(authenticationManager, menuService, managerTokenGenerate, cache));
-
-
-        return http.build();
-    }
-
-    /**
-     * 获取AuthenticationManager Bean
-     */
-    @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
-        return authenticationConfiguration.getAuthenticationManager();
     }
 
 
-    /**
-     * 获取AuthenticationConfiguration Bean
-     */
-    @Bean
-    public AuthenticationConfiguration authenticationConfiguration() {
-        return this.authenticationConfiguration;
-    }
+
+
+
 }

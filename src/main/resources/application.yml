@@ -2,9 +2,10 @@ db_ip: 127.0.0.1
 db_port: 3306
 db_database: lilishop
 db_username: root
-
+db_password: 123456
+sys:
+  simple-message-queue-enabled: true
 spring:
-
   profiles:
     active: default
 
@@ -143,3 +144,4 @@ lili:
     corePoolSize: 5
     maxPoolSize: 50
     queueCapacity: 50
+debug: true

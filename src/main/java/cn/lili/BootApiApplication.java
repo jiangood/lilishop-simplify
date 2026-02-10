@@ -2,6 +2,7 @@ package cn.lili;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
@@ -20,6 +21,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 @EnableCaching
 @EnableAsync
 @EnableScheduling
+@EntityScan(basePackages = {"cn.lili"})
 public class BootApiApplication {
 
 
