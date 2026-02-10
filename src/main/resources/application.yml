@@ -101,14 +101,9 @@ mybatis-plus:
 
 # 日志
 logging:
-  config: classpath:logback-spring.xml
-  # 输出级别
   level:
     root: info
-#    org.springframework: debug
-  file:
-    # 指定路径
-    path: lili-logs
+    org.springframework: trace
 
 springdoc:
   api-docs:
