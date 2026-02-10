@@ -15,7 +15,6 @@ import cn.lili.common.enums.ResultCode;
 import cn.lili.framework.queue.TransactionCommitSendMessageEvent;
 import cn.lili.common.exception.ServiceException;
 import cn.lili.common.message.Topic;
-import cn.lili.framework.queue.MessageQueueTemplate;
 import cn.lili.common.security.OperationalJudgment;
 import cn.lili.common.security.context.UserContext;
 import cn.lili.common.security.enums.UserEnums;
@@ -61,6 +60,8 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import io.github.jiangood.openadmin.framework.middleware.mq.core.MessageQueueTemplate;
+import io.github.jiangood.openadmin.lang.JsonTool;
 import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -634,7 +635,7 @@ public class OrderService extends ServiceImpl<OrderMapper, Order>  {
         //发送商品购买消息
         if (!goodsCompleteMessageList.isEmpty()) {
             //发送订单变更mq消息
-            messageQueueTemplate.send(Topic.GOODS, BUY_GOODS_COMPLETE.name(), goodsCompleteMessageList);
+            messageQueueTemplate.send(Topic.GOODS, BUY_GOODS_COMPLETE.name(), JsonTool.toJsonQuietly( goodsCompleteMessageList));
         }
     }
 

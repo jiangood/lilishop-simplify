@@ -3,13 +3,15 @@ package cn.lili.consumer.listener;
 import cn.hutool.json.JSONUtil;
 import cn.lili.cache.Cache;
 import cn.lili.common.message.Topic;
-import cn.lili.framework.queue.MessageQueue;
-import cn.lili.framework.queue.MessageQueueListener;
 import cn.lili.consumer.event.OrderStatusChangeEvent;
 import cn.lili.consumer.event.TradeEvent;
 import cn.lili.modules.order.cart.entity.dto.TradeDTO;
 import cn.lili.modules.order.order.entity.dto.OrderMessage;
 import cn.lili.rocketmq.tags.OrderTagsEnum;
+import io.github.jiangood.openadmin.framework.middleware.mq.annotation.MQMessageListener;
+import io.github.jiangood.openadmin.framework.middleware.mq.core.MQListener;
+import io.github.jiangood.openadmin.framework.middleware.mq.core.Message;
+import io.github.jiangood.openadmin.framework.middleware.mq.core.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -24,12 +26,9 @@ import java.util.List;
  **/
 @Component
 @Slf4j
-public class OrderMessageListener implements MessageQueueListener {
+@MQMessageListener(topic = Topic.ORDER)
+public class OrderMessageListener implements MQListener {
 
-    @Override
-    public Topic getTopic() {
-        return Topic.ORDER;
-    }
 
     /**
      * 交易
@@ -48,19 +47,20 @@ public class OrderMessageListener implements MessageQueueListener {
     private Cache<Object> cache;
 
     @Override
-    public void onMessage(MessageQueue messageExt) {
+    public Result onMessage(Message messageExt) {
         try {
             this.orderStatusEvent(messageExt);
         } catch (Exception e) {
             log.error("订单状态变更事件调用异常", e);
         }
+        return Result.SUCCESS;
     }
 
     /**
      * 订单状态变更
      * @param messageExt
      */
-    public void orderStatusEvent(MessageQueue messageExt) {
+    public void orderStatusEvent(Message messageExt) {
 
         switch (OrderTagsEnum.valueOf(messageExt.getTag())) {
             //订单创建

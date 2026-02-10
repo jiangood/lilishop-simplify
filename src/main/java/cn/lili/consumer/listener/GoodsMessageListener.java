@@ -8,8 +8,6 @@ import cn.hutool.core.util.ClassLoaderUtil;
 import cn.lili.common.aop.annotation.RetryOperation;
 import cn.lili.common.exception.RetryException;
 import cn.lili.common.message.Topic;
-import cn.lili.framework.queue.MessageQueue;
-import cn.lili.framework.queue.MessageQueueListener;
 import cn.lili.common.vo.PageVO;
 import cn.lili.consumer.event.GoodsCommentCompleteEvent;
 import cn.lili.modules.distribution.entity.dos.DistributionGoods;
@@ -40,6 +38,10 @@ import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import io.github.jiangood.openadmin.framework.middleware.mq.annotation.MQMessageListener;
+import io.github.jiangood.openadmin.framework.middleware.mq.core.MQListener;
+import io.github.jiangood.openadmin.framework.middleware.mq.core.Message;
+import io.github.jiangood.openadmin.framework.middleware.mq.core.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -55,12 +57,10 @@ import java.util.stream.Collectors;
  **/
 @Component
 @Slf4j
-public class GoodsMessageListener implements MessageQueueListener {
+@MQMessageListener(topic = Topic.GOODS)
+public class GoodsMessageListener implements MQListener {
 
-    @Override
-    public Topic getTopic() {
-        return Topic.GOODS;
-    }
+
     private static final int BATCH_SIZE = 10;
 
     /**
@@ -127,7 +127,7 @@ public class GoodsMessageListener implements MessageQueueListener {
 
     @Override
     @RetryOperation
-    public void onMessage(MessageQueue messageExt) {
+    public Result onMessage(Message messageExt) {
 
         switch (GoodsTagsEnum.valueOf(messageExt.getTag())) {
             //查看商品
@@ -265,6 +265,7 @@ public class GoodsMessageListener implements MessageQueueListener {
                 log.error("商品执行异常：{}", new String(messageExt.getBody()));
                 break;
         }
+        return Result.SUCCESS;
     }
 
     private void updateGoodsIndexPromotions(String promotionsJsonStr) {
@@ -484,7 +485,7 @@ public class GoodsMessageListener implements MessageQueueListener {
      *
      * @param messageExt 信息体
      */
-    private void goodsBuyComplete(MessageQueue messageExt) {
+    private void goodsBuyComplete(Message messageExt) {
         String goodsCompleteMessageStr = new String(messageExt.getBody());
         List<GoodsCompleteMessage> goodsCompleteMessageList = JSON.parseArray(goodsCompleteMessageStr, GoodsCompleteMessage.class);
         for (GoodsCompleteMessage goodsCompleteMessage : goodsCompleteMessageList) {

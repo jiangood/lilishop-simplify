@@ -20,8 +20,9 @@ import cn.lili.modules.search.utils.EsIndexUtil;
 
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import io.github.jiangood.openadmin.lang.JsonTool;
 import lombok.extern.slf4j.Slf4j;
-import cn.lili.framework.queue.MessageQueueTemplate;
+import io.github.jiangood.openadmin.framework.middleware.mq.core.MessageQueueTemplate;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -221,7 +222,7 @@ public class PointsGoodsService extends AbstractPromotionsServiceImpl<PointsGood
         Map<String, Object> update = MapUtil.builder(new HashMap<String, Object>()).put("points", promotions.getPoints()).build();
         //修改规格索引,发送mq消息
         Map<String, Object> updateIndexFieldsMap = EsIndexUtil.getUpdateIndexFieldsMap(query, update);
-        messageQueueTemplate.send(Topic.GOODS, GoodsTagsEnum.UPDATE_GOODS_INDEX_FIELD.name(),updateIndexFieldsMap);
+        messageQueueTemplate.send(Topic.GOODS, GoodsTagsEnum.UPDATE_GOODS_INDEX_FIELD.name(), JsonTool.toJsonQuietly(updateIndexFieldsMap));
     }
 
 

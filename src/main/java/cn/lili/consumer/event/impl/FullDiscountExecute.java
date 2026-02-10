@@ -29,8 +29,9 @@ import cn.lili.modules.order.trade.service.OrderLogService;
 import cn.lili.modules.promotion.service.MemberCouponService;
 
 
+import io.github.jiangood.openadmin.lang.JsonTool;
 import lombok.extern.slf4j.Slf4j;
-import cn.lili.framework.queue.MessageQueueTemplate;
+import io.github.jiangood.openadmin.framework.middleware.mq.core.MessageQueueTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -244,6 +245,6 @@ public class FullDiscountExecute implements TradeEvent, OrderStatusChangeEvent {
         orderMessage.setNewStatus(OrderStatusEnum.PAID);
 
         //发送订单变更mq消息
-        messageQueueTemplate.send(Topic.ORDER, STATUS_CHANGE.name(),orderMessage);
+        messageQueueTemplate.send(Topic.ORDER, STATUS_CHANGE.name(), JsonTool.toJsonQuietly(orderMessage));
     }
 }

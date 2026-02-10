@@ -2,11 +2,13 @@ package cn.lili.consumer.listener;
 
 import cn.hutool.json.JSONUtil;
 import cn.lili.common.message.Topic;
-import cn.lili.framework.queue.MessageQueue;
-import cn.lili.framework.queue.MessageQueueListener;
 import cn.lili.consumer.event.AfterSaleStatusChangeEvent;
 import cn.lili.modules.order.aftersale.entity.dos.AfterSale;
 import cn.lili.rocketmq.tags.AfterSaleTagsEnum;
+import io.github.jiangood.openadmin.framework.middleware.mq.annotation.MQMessageListener;
+import io.github.jiangood.openadmin.framework.middleware.mq.core.MQListener;
+import io.github.jiangood.openadmin.framework.middleware.mq.core.Message;
+import io.github.jiangood.openadmin.framework.middleware.mq.core.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -20,11 +22,9 @@ import java.util.List;
  */
 @Slf4j
 @Component
-public class AfterSaleMessageListener implements MessageQueueListener {
-    @Override
-    public Topic getTopic() {
-        return Topic.AFTER_SALE;
-    }
+@MQMessageListener(topic = Topic.AFTER_SALE)
+public class AfterSaleMessageListener implements MQListener {
+
 
     /**
      * 售后订单状态
@@ -32,21 +32,23 @@ public class AfterSaleMessageListener implements MessageQueueListener {
     @Autowired
     private List<AfterSaleStatusChangeEvent> afterSaleStatusChangeEvents;
 
+
+
     @Override
-    public void onMessage(MessageQueue messageExt) {
-        if (AfterSaleTagsEnum.valueOf(messageExt.getTag()) == AfterSaleTagsEnum.AFTER_SALE_STATUS_CHANGE) {
+    public Result onMessage(Message msg) {
+        if (AfterSaleTagsEnum.valueOf(msg.getTag()) == AfterSaleTagsEnum.AFTER_SALE_STATUS_CHANGE) {
             for (AfterSaleStatusChangeEvent afterSaleStatusChangeEvent : afterSaleStatusChangeEvents) {
                 try {
-                    AfterSale afterSale = JSONUtil.toBean(new String(messageExt.getBody()), AfterSale.class);
+                    AfterSale afterSale = JSONUtil.toBean(msg.getBody(), AfterSale.class);
                     afterSaleStatusChangeEvent.afterSaleStatusChange(afterSale);
                 } catch (Exception e) {
                     log.error("售后{},在{}业务中，状态修改事件执行异常",
-                            new String(messageExt.getBody()),
+                            msg.getBody(),
                             afterSaleStatusChangeEvent.getClass().getName(),
                             e);
                 }
             }
         }
-
+        return Result.SUCCESS;
     }
 }

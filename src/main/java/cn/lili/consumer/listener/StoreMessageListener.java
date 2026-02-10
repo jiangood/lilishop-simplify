@@ -2,11 +2,13 @@ package cn.lili.consumer.listener;
 
 import cn.hutool.json.JSONUtil;
 import cn.lili.common.message.Topic;
-import cn.lili.framework.queue.MessageQueue;
-import cn.lili.framework.queue.MessageQueueListener;
 import cn.lili.consumer.event.StoreSettingChangeEvent;
 import cn.lili.modules.store.entity.dos.Store;
 import cn.lili.rocketmq.tags.StoreTagsEnum;
+import io.github.jiangood.openadmin.framework.middleware.mq.annotation.MQMessageListener;
+import io.github.jiangood.openadmin.framework.middleware.mq.core.MQListener;
+import io.github.jiangood.openadmin.framework.middleware.mq.core.Message;
+import io.github.jiangood.openadmin.framework.middleware.mq.core.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -20,18 +22,15 @@ import java.util.List;
  */
 @Component
 @Slf4j
-public class StoreMessageListener implements MessageQueueListener {
+@MQMessageListener(topic = Topic.STORE)
+public class StoreMessageListener implements MQListener {
 
-    @Override
-    public Topic getTopic() {
-        return Topic.STORE;
-    }
 
     @Autowired
     private List<StoreSettingChangeEvent> storeSettingChangeEventList;
 
     @Override
-    public void onMessage(MessageQueue messageExt) {
+    public Result onMessage(Message messageExt) {
         switch (StoreTagsEnum.valueOf(messageExt.getTag())){
             //修改店铺
             case EDIT_STORE_SETTING:
@@ -50,5 +49,6 @@ public class StoreMessageListener implements MessageQueueListener {
             default:
                 break;
         }
+        return Result.SUCCESS;
     }
 }

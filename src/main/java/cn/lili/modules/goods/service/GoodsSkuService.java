@@ -59,13 +59,14 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import io.github.jiangood.openadmin.lang.JsonTool;
 import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.http.HttpServletResponse;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.ss.util.CellRangeAddressList;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import cn.lili.framework.queue.MessageQueueTemplate;
+import io.github.jiangood.openadmin.framework.middleware.mq.core.MessageQueueTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
@@ -201,7 +202,7 @@ public class GoodsSkuService extends ServiceImpl<GoodsSkuMapper, GoodsSku>  {
             goodsGalleryService.removeByGoodsId(goods.getId());
 
             //发送mq消息
-            messageQueueTemplate.send(Topic.GOODS, SKU_DELETE.name(), oldSkuIds);
+            messageQueueTemplate.send(Topic.GOODS, SKU_DELETE.name(), JsonTool.toJsonQuietly(oldSkuIds));
         } else {
             skuList = new ArrayList<>();
             for (Map<String, Object> map : goodsOperationDTO.getSkuList()) {
@@ -298,14 +299,14 @@ public class GoodsSkuService extends ServiceImpl<GoodsSkuMapper, GoodsSku>  {
         //如果使用商品ID无法查询SKU则返回错误
         if (goodsVO == null || goodsSku == null) {
             //发送mq消息
-            messageQueueTemplate.send(Topic.GOODS, GOODS_DELETE.name(), Collections.singletonList(goodsId));
+            messageQueueTemplate.send(Topic.GOODS, GOODS_DELETE.name(), JsonTool.toJsonQuietly( Collections.singletonList(goodsId)));
             throw new ServiceException(ResultCode.GOODS_NOT_EXIST);
         }
 
         //商品下架||商品未审核通过||商品删除，则提示：商品已下架
         if (GoodsStatusEnum.DOWN.name().equals(goodsVO.getMarketEnable()) || !GoodsAuthEnum.PASS.name().equals(goodsVO.getAuthFlag()) || Boolean.TRUE.equals(goodsVO.getDeleteFlag())) {
             String destination = "goods:" + "GOODS_DELETE";
-            messageQueueTemplate.send(Topic.GOODS, GOODS_DELETE.name(), Collections.singletonList(goodsId));
+            messageQueueTemplate.send(Topic.GOODS, GOODS_DELETE.name(), JsonTool.toJsonQuietly(Collections.singletonList(goodsId)));
             throw new ServiceException(ResultCode.GOODS_NOT_EXIST);
         }
 
@@ -384,7 +385,7 @@ public class GoodsSkuService extends ServiceImpl<GoodsSkuMapper, GoodsSku>  {
         //记录用户足迹
         if (currentUser != null) {
             FootPrint footPrint = new FootPrint(currentUser.getId(), goodsIndex.getStoreId(), goodsId, skuId);
-            messageQueueTemplate.send(Topic.GOODS, VIEW_GOODS.name(), footPrint);
+            messageQueueTemplate.send(Topic.GOODS, VIEW_GOODS.name(), JsonTool.toJsonQuietly(footPrint));
         }
         return map;
     }
@@ -746,7 +747,7 @@ public class GoodsSkuService extends ServiceImpl<GoodsSkuMapper, GoodsSku>  {
             if (isFlag && quantity > 0 && CharSequenceUtil.equals(goodsSku.getMarketEnable(), GoodsStatusEnum.UPPER.name())) {
                 List<String> goodsIds = new ArrayList<>();
                 goodsIds.add(goodsSku.getGoodsId());
-                applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(Topic.GOODS, UPDATE_GOODS_INDEX.name(), goodsIds));
+                applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(Topic.GOODS, UPDATE_GOODS_INDEX.name(), JsonTool.toJsonQuietly(goodsIds)));
             }
         }
     }
@@ -783,7 +784,7 @@ public class GoodsSkuService extends ServiceImpl<GoodsSkuMapper, GoodsSku>  {
             if (isFlag && quantity > 0 && CharSequenceUtil.equals(goodsSku.getMarketEnable(), GoodsStatusEnum.UPPER.name())) {
                 List<String> goodsIds = new ArrayList<>();
                 goodsIds.add(goodsSku.getGoodsId());
-                applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(Topic.GOODS, UPDATE_GOODS_INDEX.name(), goodsIds));
+                applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(Topic.GOODS, UPDATE_GOODS_INDEX.name(), JsonTool.toJsonQuietly(goodsIds)));
             }
         }
     }

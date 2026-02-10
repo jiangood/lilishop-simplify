@@ -7,7 +7,7 @@ import cn.lili.cache.CachePrefix;
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.exception.ServiceException;
 import cn.lili.common.message.Topic;
-import cn.lili.framework.queue.MessageQueueTemplate;
+import io.github.jiangood.openadmin.framework.middleware.mq.core.MessageQueueTemplate;
 import cn.lili.common.security.AuthUser;
 import cn.lili.common.security.context.UserContext;
 import cn.lili.common.security.enums.UserEnums;
@@ -41,6 +41,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import io.github.jiangood.openadmin.lang.JsonTool;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -184,7 +185,7 @@ public class StoreService extends ServiceImpl<StoreMapper, Store>  {
                 storeDetailService.updateStoreGoodsInfo(store);
             }
             //发送订单变更mq消息
-            messageQueueTemplate.send(Topic.STORE, StoreTagsEnum.EDIT_STORE_SETTING.name(),store);
+            messageQueueTemplate.send(Topic.STORE, StoreTagsEnum.EDIT_STORE_SETTING.name(), JsonTool.toJsonQuietly(store));
         }
 
         cache.remove(CachePrefix.STORE.getPrefix() + storeEditDTO.getStoreId());

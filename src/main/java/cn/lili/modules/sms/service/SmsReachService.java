@@ -8,7 +8,8 @@ import cn.lili.modules.sms.mapper.SmsReachMapper;
 import cn.lili.modules.sms.service.SmsReachService;
 import cn.lili.rocketmq.tags.OtherTagsEnum;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import cn.lili.framework.queue.MessageQueueTemplate;
+import io.github.jiangood.openadmin.framework.middleware.mq.core.MessageQueueTemplate;
+import io.github.jiangood.openadmin.lang.JsonTool;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,7 +36,7 @@ public class SmsReachService extends ServiceImpl<SmsReachMapper, SmsReach>  {
         smsReachDTO.setMobile(mobile);
         this.save(smsReach);
         //发送短信批量发送mq消息
-        messageQueueTemplate.send(Topic.NOTICE_SEND, OtherTagsEnum.SMS.name(),smsReachDTO);
+        messageQueueTemplate.send(Topic.NOTICE_SEND, OtherTagsEnum.SMS.name(), JsonTool.toJsonQuietly(smsReachDTO));
 
     }
 }

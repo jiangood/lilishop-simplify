@@ -23,12 +23,13 @@ import cn.lili.rocketmq.tags.MemberTagsEnum;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import io.github.jiangood.openadmin.lang.JsonTool;
 import jakarta.servlet.http.HttpServletResponse;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import cn.lili.framework.queue.MessageQueueTemplate;
+import io.github.jiangood.openadmin.framework.middleware.mq.core.MessageQueueTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -83,7 +84,7 @@ public class DistributionCashService extends ServiceImpl<DistributionCashMapper,
                 memberWithdrawalMessage.setMemberId(distribution.getMemberId());
                 memberWithdrawalMessage.setPrice(applyMoney);
                 memberWithdrawalMessage.setStatus(WithdrawStatusEnum.APPLY.name());
-                messageQueueTemplate.send(Topic.MEMBER, MemberTagsEnum.MEMBER_WITHDRAWAL.name(), memberWithdrawalMessage);
+                messageQueueTemplate.send(Topic.MEMBER, MemberTagsEnum.MEMBER_WITHDRAWAL.name(), JsonTool.toJsonQuietly(memberWithdrawalMessage));
                 return true;
             }
             return false;

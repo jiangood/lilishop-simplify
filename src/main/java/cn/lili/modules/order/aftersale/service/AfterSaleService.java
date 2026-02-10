@@ -45,6 +45,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import io.github.jiangood.openadmin.lang.JsonTool;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -626,7 +627,7 @@ public class AfterSaleService extends ServiceImpl<AfterSaleMapper, AfterSale>  {
     @Transactional(rollbackFor = Exception.class)
     public void sendAfterSaleMessage(AfterSale afterSale) {
         applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(Topic.AFTER_SALE,
-                AfterSaleTagsEnum.AFTER_SALE_STATUS_CHANGE.name(), afterSale));
+                AfterSaleTagsEnum.AFTER_SALE_STATUS_CHANGE.name(), JsonTool.toJsonQuietly(afterSale)));
     }
 
     // TODO 检查为啥没调用，参考原始逻辑

@@ -4,7 +4,7 @@ package cn.lili.modules.wallet.service;
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.exception.ServiceException;
 import cn.lili.common.message.Topic;
-import cn.lili.framework.queue.MessageQueueTemplate;
+import io.github.jiangood.openadmin.framework.middleware.mq.core.MessageQueueTemplate;
 import cn.lili.common.utils.StringUtils;
 import cn.lili.common.vo.PageVO;
 import cn.lili.modules.wallet.entity.dos.MemberWithdrawApply;
@@ -20,6 +20,7 @@ import cn.lili.rocketmq.tags.MemberTagsEnum;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import io.github.jiangood.openadmin.lang.JsonTool;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -78,7 +79,7 @@ public class MemberWithdrawApplyService extends ServiceImpl<MemberWithdrawApplyM
             memberWithdrawalMessage.setMemberId(memberWithdrawApply.getMemberId());
             memberWithdrawalMessage.setPrice(memberWithdrawApply.getApplyMoney());
 
-            messageQueueTemplate.send(Topic.MEMBER, MemberTagsEnum.MEMBER_WITHDRAWAL.name(),memberWithdrawalMessage);
+            messageQueueTemplate.send(Topic.MEMBER, MemberTagsEnum.MEMBER_WITHDRAWAL.name(), JsonTool.toJsonQuietly(memberWithdrawalMessage));
             return true;
         }
         throw new ServiceException(ResultCode.WALLET_APPLY_ERROR);

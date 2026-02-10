@@ -13,7 +13,8 @@ import cn.lili.mybatis.util.PageUtil;
 import cn.lili.rocketmq.tags.OtherTagsEnum;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import cn.lili.framework.queue.MessageQueueTemplate;
+import io.github.jiangood.openadmin.framework.middleware.mq.core.MessageQueueTemplate;
+import io.github.jiangood.openadmin.lang.JsonTool;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,7 +44,7 @@ public class MessageService extends ServiceImpl<MessageMapper, Message>  {
         //保存站内信信息
         this.save(message);
         //发送站内信消息提醒
-        messageQueueTemplate.send(Topic.NOTICE_SEND, OtherTagsEnum.MESSAGE.name(), message);
+        messageQueueTemplate.send(Topic.NOTICE_SEND, OtherTagsEnum.MESSAGE.name(), JsonTool.toJsonQuietly(message));
         return true;
     }
 

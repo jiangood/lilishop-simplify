@@ -2,8 +2,6 @@ package cn.lili.consumer.listener;
 
 import cn.hutool.json.JSONUtil;
 import cn.lili.common.message.Topic;
-import cn.lili.framework.queue.MessageQueue;
-import cn.lili.framework.queue.MessageQueueListener;
 import cn.lili.consumer.event.*;
 import cn.lili.modules.connect.entity.dto.MemberConnectLoginMessage;
 import cn.lili.modules.member.entity.dos.Member;
@@ -12,6 +10,10 @@ import cn.lili.modules.member.entity.dto.MemberPointMessage;
 import cn.lili.modules.member.service.MemberSignService;
 import cn.lili.modules.wallet.entity.dto.MemberWithdrawalMessage;
 import cn.lili.rocketmq.tags.MemberTagsEnum;
+import io.github.jiangood.openadmin.framework.middleware.mq.annotation.MQMessageListener;
+import io.github.jiangood.openadmin.framework.middleware.mq.core.MQListener;
+import io.github.jiangood.openadmin.framework.middleware.mq.core.Message;
+import io.github.jiangood.openadmin.framework.middleware.mq.core.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -26,12 +28,9 @@ import java.util.List;
  **/
 @Component
 @Slf4j
-public class MemberMessageListener implements MessageQueueListener {
+@MQMessageListener(topic = Topic.MEMBER)
+public class MemberMessageListener implements MQListener {
 
-    @Override
-    public Topic getTopic() {
-        return Topic.MEMBER;
-    }
     /**
      * 会员签到
      */
@@ -64,7 +63,7 @@ public class MemberMessageListener implements MessageQueueListener {
     private List<MemberConnectLoginEvent> memberConnectLoginEvents;
 
     @Override
-    public void onMessage(MessageQueue messageExt) {
+    public Result onMessage(Message messageExt) {
         switch (MemberTagsEnum.valueOf(messageExt.getTag())) {
             //会员注册
             case MEMBER_REGISTER:
@@ -159,5 +158,6 @@ public class MemberMessageListener implements MessageQueueListener {
             default:
                 break;
         }
+        return Result.SUCCESS;
     }
 }

@@ -28,8 +28,9 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.google.gson.Gson;
+import io.github.jiangood.openadmin.lang.JsonTool;
 import lombok.extern.slf4j.Slf4j;
-import cn.lili.framework.queue.MessageQueueTemplate;
+import io.github.jiangood.openadmin.framework.middleware.mq.core.MessageQueueTemplate;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -194,7 +195,7 @@ public class SeckillService extends AbstractPromotionsServiceImpl<SeckillMapper,
         Map<Object, Object> build = MapBuilder.create().put("promotionKey", this.getPromotionType() + "-" + seckill.getId()).put("scopeId", ArrayUtil.join(skuIds.toArray(), ",")).build();
         //删除商品促销消息
         //发送mq消息
-        messageQueueTemplate.send(Topic.GOODS,GoodsTagsEnum.DELETE_GOODS_INDEX_PROMOTIONS.name(), build);
+        messageQueueTemplate.send(Topic.GOODS,GoodsTagsEnum.DELETE_GOODS_INDEX_PROMOTIONS.name(), JsonTool.toJsonQuietly(build));
     }
 
     

@@ -7,13 +7,12 @@ import cn.hutool.core.util.NumberUtil;
 import cn.lili.cache.Cache;
 import cn.lili.cache.CachePrefix;
 import cn.lili.common.enums.ResultCode;
-import cn.lili.framework.queue.TransactionCommitSendMessageEvent;
 import cn.lili.common.exception.ServiceException;
 import cn.lili.common.message.Topic;
-import cn.lili.framework.queue.MessageQueueTemplate;
 import cn.lili.common.security.AuthUser;
 import cn.lili.common.security.context.UserContext;
 import cn.lili.common.security.enums.UserEnums;
+import cn.lili.framework.queue.TransactionCommitSendMessageEvent;
 import cn.lili.modules.goods.entity.dos.*;
 import cn.lili.modules.goods.entity.dto.GoodsOperationDTO;
 import cn.lili.modules.goods.entity.dto.GoodsParamsItemDTO;
@@ -24,7 +23,6 @@ import cn.lili.modules.goods.entity.vos.GoodsNumVO;
 import cn.lili.modules.goods.entity.vos.GoodsSkuVO;
 import cn.lili.modules.goods.entity.vos.GoodsVO;
 import cn.lili.modules.goods.mapper.GoodsMapper;
-import cn.lili.modules.goods.service.*;
 import cn.lili.modules.member.entity.dto.EvaluationQueryParams;
 import cn.lili.modules.member.entity.enums.EvaluationGradeEnum;
 import cn.lili.modules.member.service.MemberEvaluationService;
@@ -48,6 +46,8 @@ import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import io.github.jiangood.openadmin.framework.middleware.mq.core.MessageQueueTemplate;
+import io.github.jiangood.openadmin.lang.JsonTool;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
@@ -136,7 +136,7 @@ public class GoodsService extends ServiceImpl<GoodsMapper, Goods>  {
         //下架店铺下的商品
         this.updateGoodsMarketAbleByStoreId(storeId, GoodsStatusEnum.DOWN, "店铺关闭");
 
-        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(Topic.GOODS, DOWN.name(), list));
+        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(Topic.GOODS, DOWN.name(), JsonTool.toJsonQuietly(list)));
 
     }
 
@@ -374,7 +374,7 @@ public class GoodsService extends ServiceImpl<GoodsMapper, Goods>  {
             goodsCacheKeys.add(CachePrefix.GOODS.getPrefix() + goodsId);
             //商品审核消息
             //发送mq消息
-            messageQueueTemplate.send(Topic.GOODS, GOODS_AUDIT.name(), goods);
+            messageQueueTemplate.send(Topic.GOODS, GOODS_AUDIT.name(), JsonTool.toJsonQuietly(goods));
         }
         cache.multiDel(goodsCacheKeys);
         return result;
@@ -555,7 +555,7 @@ public class GoodsService extends ServiceImpl<GoodsMapper, Goods>  {
         this.goodsSkuService.updateGoodsSkuGrade(goodsId, grade, goods.getCommentNum());
 
         Map<String, Object> updateIndexFieldsMap = EsIndexUtil.getUpdateIndexFieldsMap(MapUtil.builder(new HashMap<String, Object>()).put("goodsId", goodsId).build(), MapUtil.builder(new HashMap<String, Object>()).put("commentNum", goods.getCommentNum()).put("highPraiseNum", highPraiseNum).put("grade", grade).build());
-        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(Topic.GOODS, UPDATE_GOODS_INDEX_FIELD.name(), updateIndexFieldsMap));
+        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(Topic.GOODS, UPDATE_GOODS_INDEX_FIELD.name(), JsonTool.toJsonQuietly(updateIndexFieldsMap)));
     }
 
     /**
@@ -631,7 +631,7 @@ public class GoodsService extends ServiceImpl<GoodsMapper, Goods>  {
 
         //下架商品发送消息
         if (goodsStatusEnum.equals(GoodsStatusEnum.DOWN)) {
-            applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(Topic.GOODS, DOWN.name(), goodsIds));
+            applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(Topic.GOODS, DOWN.name(), JsonTool.toJsonQuietly(goodsIds)));
         }
     }
 
@@ -656,7 +656,7 @@ public class GoodsService extends ServiceImpl<GoodsMapper, Goods>  {
      */
     @Transactional
     public void updateEsGoods(List<String> goodsIds) {
-        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(Topic.GOODS, "UPDATE_GOODS_INDEX", goodsIds));
+        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(Topic.GOODS, "UPDATE_GOODS_INDEX", JsonTool.toJsonQuietly(goodsIds)));
     }
 
     /**

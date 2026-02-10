@@ -1,5 +1,6 @@
 package cn.lili.framework.queue;
 
+import io.github.jiangood.openadmin.framework.middleware.mq.core.MessageQueueTemplate;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;

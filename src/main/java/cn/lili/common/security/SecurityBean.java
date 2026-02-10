@@ -19,10 +19,7 @@ import java.util.Collections;
 @Configuration
 public class SecurityBean {
 
-    @Bean
-    public BCryptPasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+
 
     /**
      * 定义跨域配置

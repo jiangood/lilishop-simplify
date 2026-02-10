@@ -22,7 +22,8 @@ import cn.lili.rocketmq.tags.MemberTagsEnum;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.google.gson.Gson;
-import cn.lili.framework.queue.MessageQueueTemplate;
+import io.github.jiangood.openadmin.framework.middleware.mq.core.MessageQueueTemplate;
+import io.github.jiangood.openadmin.lang.JsonTool;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -87,7 +88,7 @@ public class MemberSignService extends ServiceImpl<MemberSignMapper, MemberSign>
             try {
                 this.baseMapper.insert(memberSign);
                 //签到成功后发送消息赠送积分
-                messageQueueTemplate.send(Topic.MEMBER, MemberTagsEnum.MEMBER_SING.name(), memberSign);
+                messageQueueTemplate.send(Topic.MEMBER, MemberTagsEnum.MEMBER_SING.name(), JsonTool.toJsonQuietly(memberSign));
                 return true;
             } catch (Exception e) {
                 throw new ServiceException(ResultCode.MEMBER_SIGN_REPEAT);

@@ -24,6 +24,7 @@ import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import io.github.jiangood.openadmin.lang.JsonTool;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
@@ -256,7 +257,7 @@ public abstract class AbstractPromotionsServiceImpl<M extends BaseMapper<T>, T e
         if (promotions.getStartTime() == null && promotions.getEndTime() == null) {
             Map<Object, Object> build = MapBuilder.create().put("promotionKey", this.getPromotionType() + "-" + promotions.getId()).put("scopeId", promotions.getScopeId()).build();
             //删除商品促销消息
-            applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(Topic.GOODS, GoodsTagsEnum.DELETE_GOODS_INDEX_PROMOTIONS.name(), build));
+            applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(Topic.GOODS, GoodsTagsEnum.DELETE_GOODS_INDEX_PROMOTIONS.name(), JsonTool.toJsonQuietly(build)));
         } else {
             this.sendUpdateEsGoodsMsg(promotions);
         }

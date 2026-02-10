@@ -5,7 +5,6 @@ import cn.hutool.core.map.MapUtil;
 import cn.lili.cache.Cache;
 import cn.lili.cache.CachePrefix;
 import cn.lili.common.message.Topic;
-import cn.lili.framework.queue.MessageQueueTemplate;
 import cn.lili.common.security.AuthUser;
 import cn.lili.common.security.context.UserContext;
 import cn.lili.common.utils.BeanUtil;
@@ -32,6 +31,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import io.github.jiangood.openadmin.framework.middleware.mq.core.MessageQueueTemplate;
+import io.github.jiangood.openadmin.lang.JsonTool;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -100,7 +101,7 @@ public class StoreDetailService extends ServiceImpl<StoreDetailMapper, StoreDeta
             this.removeCache(store.getId());
         }
         //发送订单变更mq消息
-        messageQueueTemplate.send(Topic.STORE, StoreTagsEnum.EDIT_STORE_SETTING.name(), store);
+        messageQueueTemplate.send(Topic.STORE, StoreTagsEnum.EDIT_STORE_SETTING.name(), JsonTool.toJsonQuietly(store) );
         return result;
     }
 
@@ -113,7 +114,7 @@ public class StoreDetailService extends ServiceImpl<StoreDetailMapper, StoreDeta
                 MapUtil.builder(new HashMap<String, Object>()).put("storeId", store.getId()).build(),
                 MapUtil.builder(new HashMap<String, Object>()).put("storeName", store.getStoreName()).put("selfOperated", store.getSelfOperated()).build());
         //发送mq消息
-        messageQueueTemplate.send(Topic.GOODS, GoodsTagsEnum.UPDATE_GOODS_INDEX_FIELD.name(), updateIndexFieldsMap);
+        messageQueueTemplate.send(Topic.GOODS, GoodsTagsEnum.UPDATE_GOODS_INDEX_FIELD.name(), JsonTool.toJsonQuietly(updateIndexFieldsMap));
     }
 
     

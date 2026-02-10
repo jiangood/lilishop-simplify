@@ -70,6 +70,11 @@
             </exclusions>
         </dependency>
         <dependency>
+            <groupId>io.github.jiangood</groupId>
+            <artifactId>open-admin</artifactId>
+            <version>1.2.1-SNAPSHOT</version>
+        </dependency>
+        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>

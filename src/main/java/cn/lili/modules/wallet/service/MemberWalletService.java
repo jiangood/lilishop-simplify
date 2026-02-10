@@ -4,7 +4,7 @@ package cn.lili.modules.wallet.service;
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.exception.ServiceException;
 import cn.lili.common.message.Topic;
-import cn.lili.framework.queue.MessageQueueTemplate;
+import io.github.jiangood.openadmin.framework.middleware.mq.core.MessageQueueTemplate;
 import cn.lili.common.security.AuthUser;
 import cn.lili.common.security.context.UserContext;
 import cn.lili.common.utils.CurrencyUtil;
@@ -35,6 +35,7 @@ import cn.lili.rocketmq.tags.MemberTagsEnum;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.google.gson.Gson;
+import io.github.jiangood.openadmin.lang.JsonTool;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -306,7 +307,7 @@ public class MemberWalletService extends ServiceImpl<MemberWalletMapper, MemberW
         memberWithdrawalMessage.setStatus(memberWithdrawApply.getApplyStatus());
         memberWithdrawalMessage.setMemberId(authUser.getId());
         memberWithdrawalMessage.setPrice(price);
-        messageQueueTemplate.send(Topic.MEMBER, MemberTagsEnum.MEMBER_WITHDRAWAL.name(),memberWithdrawalMessage);
+        messageQueueTemplate.send(Topic.MEMBER, MemberTagsEnum.MEMBER_WITHDRAWAL.name(), JsonTool.toJsonQuietly(memberWithdrawalMessage));
 
         return true;
     }
@@ -344,7 +345,7 @@ public class MemberWalletService extends ServiceImpl<MemberWalletMapper, MemberW
         memberWithdrawalMessage.setPrice(memberWithdrawApply.getApplyMoney());
         memberWithdrawalMessage.setStatus(memberWithdrawApply.getApplyStatus());
 
-        messageQueueTemplate.send(Topic.MEMBER,MemberTagsEnum.MEMBER_WITHDRAWAL.name(), memberWithdrawalMessage);
+        messageQueueTemplate.send(Topic.MEMBER,MemberTagsEnum.MEMBER_WITHDRAWAL.name(), JsonTool.toJsonQuietly(memberWithdrawalMessage));
     }
 
 }

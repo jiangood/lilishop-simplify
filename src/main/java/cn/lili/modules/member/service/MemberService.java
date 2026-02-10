@@ -48,8 +48,9 @@ import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import io.github.jiangood.openadmin.lang.JsonTool;
 import lombok.extern.slf4j.Slf4j;
-import cn.lili.framework.queue.MessageQueueTemplate;
+import io.github.jiangood.openadmin.framework.middleware.mq.core.MessageQueueTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
@@ -322,7 +323,7 @@ public class MemberService extends ServiceImpl<MemberMapper, Member>  {
         this.save(member);
         UserContext.settingInviter(member.getId(), cache);
         // 发送会员注册信息
-        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(Topic.MEMBER, MEMBER_REGISTER.name(), member));
+        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(Topic.MEMBER, MEMBER_REGISTER.name(), JsonTool.toJsonQuietly(member)));
     }
 
     
@@ -334,7 +335,7 @@ public class MemberService extends ServiceImpl<MemberMapper, Member>  {
         //修改会员
         this.updateById(member);
         //发送订单变更mq消息
-        messageQueueTemplate.send(Topic.MEMBER,MEMBER_INFO_EDIT.name(),  member);
+        messageQueueTemplate.send(Topic.MEMBER,MEMBER_INFO_EDIT.name(),  JsonTool.toJsonQuietly(member));
         return member;
     }
 
@@ -548,7 +549,7 @@ public class MemberService extends ServiceImpl<MemberMapper, Member>  {
                 memberPointMessage.setPoint(point);
                 memberPointMessage.setType(type);
                 memberPointMessage.setMemberId(memberId);
-                applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(Topic.MEMBER, "MEMBER_POINT_CHANGE", memberPointMessage));
+                applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(Topic.MEMBER, "MEMBER_POINT_CHANGE", JsonTool.toJsonQuietly(memberPointMessage)));
                 return true;
             }
             return false;

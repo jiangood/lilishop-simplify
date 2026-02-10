@@ -3,13 +3,14 @@ package cn.lili.modules.member.token;
 import cn.lili.common.context.ThreadContextHolder;
 import cn.lili.common.enums.ClientTypeEnum;
 import cn.lili.common.message.Topic;
-import cn.lili.framework.queue.MessageQueueTemplate;
+import io.github.jiangood.openadmin.framework.middleware.mq.core.MessageQueueTemplate;
 import cn.lili.common.security.AuthUser;
 import cn.lili.common.security.enums.UserEnums;
 import cn.lili.common.security.token.Token;
 import cn.lili.common.security.token.TokenUtil;
 import cn.lili.common.security.token.base.AbstractTokenGenerate;
 import cn.lili.modules.member.entity.dos.Member;
+import io.github.jiangood.openadmin.lang.JsonTool;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -52,7 +53,7 @@ public class MemberTokenGenerate extends AbstractTokenGenerate<Member> {
         member.setLastLoginDate(new Date());
         member.setClientEnum(clientTypeEnum.name());
         if (messageQueueTemplate != null) {
-            messageQueueTemplate.send(Topic.MEMBER, MEMBER_LOGIN.name(), member);
+            messageQueueTemplate.send(Topic.MEMBER, MEMBER_LOGIN.name(), JsonTool.toJsonQuietly(member));
         }
 
         AuthUser authUser = AuthUser.builder()

@@ -1,9 +1,14 @@
 package cn.lili.common.message;
 
-public enum Topic {
+public interface Topic {
 
-    MEMBER,
-    GOODS,
+    String MEMBER = "member";
+    String GOODS = "goods";
 
-    NOTICE, ORDER, AFTER_SALE, PROMOTION, NOTICE_SEND, STORE
+    String NOTICE = "notice";
+    String ORDER = "order";
+    String AFTER_SALE = "afterSale";
+    String PROMOTION = "promotion";
+    String NOTICE_SEND = "noticeSend";
+    String STORE = "store";
 }

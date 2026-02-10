@@ -9,13 +9,13 @@ import org.springframework.context.ApplicationEvent;
 public class TransactionCommitSendMessageEvent  {
 
 
-    private final Topic topic;
+    private final String topic;
 
     private final String tag;
 
-    private final Object message;
+    private final String message;
 
-    public TransactionCommitSendMessageEvent(Topic topic, String tag, Object message) {
+    public TransactionCommitSendMessageEvent(String topic, String tag, String message) {
         this.topic = topic;
         this.tag = tag;
         this.message = message;

@@ -3,8 +3,6 @@ package cn.lili.consumer.listener;
 import cn.hutool.json.JSONUtil;
 import cn.lili.common.enums.SwitchEnum;
 import cn.lili.common.message.Topic;
-import cn.lili.framework.queue.MessageQueue;
-import cn.lili.framework.queue.MessageQueueListener;
 import cn.lili.common.vo.PageVO;
 import cn.lili.modules.member.entity.vo.MemberSearchVO;
 import cn.lili.modules.member.entity.vo.MemberVO;
@@ -24,6 +22,9 @@ import cn.lili.modules.store.service.StoreService;
 import cn.lili.rocketmq.tags.OtherTagsEnum;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import io.github.jiangood.openadmin.framework.middleware.mq.annotation.MQMessageListener;
+import io.github.jiangood.openadmin.framework.middleware.mq.core.MQListener;
+import io.github.jiangood.openadmin.framework.middleware.mq.core.Result;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -37,11 +38,8 @@ import java.util.List;
  * @since 2020/12/9
  */
 @Component
-public class NoticeSendMessageListener implements MessageQueueListener {
-    @Override
-    public Topic getTopic() {
-        return Topic.NOTICE_SEND;
-    }
+@MQMessageListener(topic = Topic.NOTICE_SEND)
+public class NoticeSendMessageListener implements MQListener {
 
     /**
      * 短信
@@ -70,10 +68,10 @@ public class NoticeSendMessageListener implements MessageQueueListener {
     private MemberService memberService;
 
     @Override
-    public void onMessage(MessageQueue messageExt) {
+    public Result onMessage(io.github.jiangood.openadmin.framework.middleware.mq.core.Message messageExt) {
         switch (OtherTagsEnum.valueOf(messageExt.getTag())) {
             case SMS:
-                String smsJsonStr = new String(messageExt.getBody());
+                String smsJsonStr = messageExt.getBody();
                 SmsReachDTO smsReachDTO = JSONUtil.toBean(smsJsonStr, SmsReachDTO.class);
                 //发送全部会员
                 if (smsReachDTO.getSmsRange().equals(RangeEnum.ALL.name())) {
@@ -99,6 +97,7 @@ public class NoticeSendMessageListener implements MessageQueueListener {
             default:
                 break;
         }
+        return Result.SUCCESS;
     }
 
     /**

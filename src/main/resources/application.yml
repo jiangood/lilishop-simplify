@@ -1,4 +1,12 @@
+db_ip: 127.0.0.1
+db_port: 3306
+db_database: lilishop
+db_username: root
+
 spring:
+
+  profiles:
+    active: default
 
   # 文件大小上传配置
   servlet:
@@ -13,14 +21,7 @@ spring:
       fail-on-empty-beans: false
 
   jpa:
-    generate-ddl: true
     show-sql: true
-  # 数据源配置
-  datasource:
-    url: jdbc:mysql://127.0.0.1:3306/lilishop?useUnicode=true&characterEncoding=utf-8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
-    username: root
-    password: 123456
-    driver-class-name: com.mysql.cj.jdbc.Driver
 
 
 
