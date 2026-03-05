@@ -1,10 +1,10 @@
 package cn.lili.modules.wallet.service;
 
 
+import cn.hutool.extra.spring.SpringUtil;
 import cn.lili.common.enums.ResultCode;
+import cn.lili.common.event.MemberEvent;
 import cn.lili.common.exception.ServiceException;
-import cn.lili.common.message.Topic;
-import cn.lili.framework.queue.MessageQueueTemplate;
 import cn.lili.common.utils.StringUtils;
 import cn.lili.common.vo.PageVO;
 import cn.lili.modules.wallet.entity.dos.MemberWithdrawApply;
@@ -13,8 +13,6 @@ import cn.lili.modules.wallet.entity.enums.WithdrawStatusEnum;
 import cn.lili.modules.wallet.entity.vo.MemberWalletVO;
 import cn.lili.modules.wallet.entity.vo.MemberWithdrawApplyQueryVO;
 import cn.lili.modules.wallet.mapper.MemberWithdrawApplyMapper;
-import cn.lili.modules.wallet.service.MemberWalletService;
-import cn.lili.modules.wallet.service.MemberWithdrawApplyService;
 import cn.lili.mybatis.util.PageUtil;
 import cn.lili.rocketmq.tags.MemberTagsEnum;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -36,9 +34,6 @@ import java.util.Date;
  */
 @Service
 public class MemberWithdrawApplyService extends ServiceImpl<MemberWithdrawApplyMapper, MemberWithdrawApply>  {
-
-    @Autowired
-    private MessageQueueTemplate messageQueueTemplate;
 
     /**
      * 会员余额
@@ -78,7 +73,7 @@ public class MemberWithdrawApplyService extends ServiceImpl<MemberWithdrawApplyM
             memberWithdrawalMessage.setMemberId(memberWithdrawApply.getMemberId());
             memberWithdrawalMessage.setPrice(memberWithdrawApply.getApplyMoney());
 
-            messageQueueTemplate.send(Topic.MEMBER, MemberTagsEnum.MEMBER_WITHDRAWAL.name(),memberWithdrawalMessage);
+            SpringUtil.publishEvent(new MemberEvent( MemberTagsEnum.MEMBER_WITHDRAWAL,memberWithdrawalMessage));
             return true;
         }
         throw new ServiceException(ResultCode.WALLET_APPLY_ERROR);

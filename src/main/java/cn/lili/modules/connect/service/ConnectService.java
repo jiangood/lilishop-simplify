@@ -2,9 +2,11 @@ package cn.lili.modules.connect.service;
 
 import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.extra.spring.SpringUtil;
 import cn.lili.cache.CachePrefix;
 import cn.lili.common.enums.ClientTypeEnum;
 import cn.lili.common.enums.ResultCode;
+import cn.lili.common.event.MemberEvent;
 import cn.lili.common.exception.ServiceException;
 import cn.lili.common.message.Topic;
 import cn.lili.common.security.AuthUser;
@@ -37,7 +39,6 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import lombok.extern.slf4j.Slf4j;
-import cn.lili.framework.queue.MessageQueueTemplate;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -80,11 +81,7 @@ public class ConnectService extends ServiceImpl<ConnectMapper, Connect>  {
     private MemberService memberService;
     @Autowired
     private MemberTokenGenerate memberTokenGenerate;
-    /**
-     * MessageQueueTemplate
-     */
-    @Autowired
-    private MessageQueueTemplate messageQueueTemplate;
+
     /**
      * 联合登录缓存key生成
      * 这个方法返回的key从缓存中可以获取到redis中记录到会员信息，有效时间30分钟
@@ -330,7 +327,8 @@ public class ConnectService extends ServiceImpl<ConnectMapper, Connect>  {
             memberConnectLoginMessage.setMember(member);
             memberConnectLoginMessage.setConnectAuthUser(authUser);
             //发送用户第三方登录消息
-            messageQueueTemplate.send(Topic.MEMBER, MEMBER_CONNECT_LOGIN.name(), JSON.toJSONString(memberConnectLoginMessage));
+
+            SpringUtil.publishEvent(new MemberEvent( MEMBER_CONNECT_LOGIN, memberConnectLoginMessage));
 
             return memberTokenGenerate.createToken(member, longTerm);
         } catch (Exception e) {

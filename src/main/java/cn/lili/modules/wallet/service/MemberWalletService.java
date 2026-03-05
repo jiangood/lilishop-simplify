@@ -1,10 +1,10 @@
 package cn.lili.modules.wallet.service;
 
 
+import cn.hutool.extra.spring.SpringUtil;
 import cn.lili.common.enums.ResultCode;
+import cn.lili.common.event.MemberEvent;
 import cn.lili.common.exception.ServiceException;
-import cn.lili.common.message.Topic;
-import cn.lili.framework.queue.MessageQueueTemplate;
 import cn.lili.common.security.AuthUser;
 import cn.lili.common.security.context.UserContext;
 import cn.lili.common.utils.CurrencyUtil;
@@ -52,9 +52,6 @@ import java.util.Date;
  */
 @Service
 public class MemberWalletService extends ServiceImpl<MemberWalletMapper, MemberWallet>  {
-
-    @Autowired
-    private MessageQueueTemplate messageQueueTemplate;
 
 
     /**
@@ -306,7 +303,7 @@ public class MemberWalletService extends ServiceImpl<MemberWalletMapper, MemberW
         memberWithdrawalMessage.setStatus(memberWithdrawApply.getApplyStatus());
         memberWithdrawalMessage.setMemberId(authUser.getId());
         memberWithdrawalMessage.setPrice(price);
-        messageQueueTemplate.send(Topic.MEMBER, MemberTagsEnum.MEMBER_WITHDRAWAL.name(),memberWithdrawalMessage);
+        SpringUtil.publishEvent(new MemberEvent(MemberTagsEnum.MEMBER_WITHDRAWAL,memberWithdrawalMessage));
 
         return true;
     }
@@ -344,7 +341,7 @@ public class MemberWalletService extends ServiceImpl<MemberWalletMapper, MemberW
         memberWithdrawalMessage.setPrice(memberWithdrawApply.getApplyMoney());
         memberWithdrawalMessage.setStatus(memberWithdrawApply.getApplyStatus());
 
-        messageQueueTemplate.send(Topic.MEMBER,MemberTagsEnum.MEMBER_WITHDRAWAL.name(), memberWithdrawalMessage);
+        SpringUtil.publishEvent(new MemberEvent(MemberTagsEnum.MEMBER_WITHDRAWAL, memberWithdrawalMessage));
     }
 
 }

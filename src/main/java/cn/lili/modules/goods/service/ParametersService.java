@@ -10,17 +10,12 @@ import cn.lili.modules.goods.entity.dto.GoodsParamsDTO;
 import cn.lili.modules.goods.entity.dto.GoodsParamsItemDTO;
 import cn.lili.modules.goods.entity.dto.GoodsParamsSearchDTO;
 import cn.lili.modules.goods.mapper.ParametersMapper;
-import cn.lili.modules.goods.service.CategoryParameterService;
-import cn.lili.modules.goods.service.GoodsService;
-import cn.lili.modules.goods.service.ParametersService;
 import cn.lili.mybatis.util.PageUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import cn.lili.framework.queue.MessageQueueTemplate;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,13 +31,6 @@ import java.util.List;
 @Service
 public class ParametersService extends ServiceImpl<ParametersMapper, Parameters>  {
 
-
-    @Autowired
-    @Lazy
-    private GoodsService goodsService;
-
-    @Autowired
-    private MessageQueueTemplate messageQueueTemplate;
 
     @Autowired
     private CategoryParameterService categoryParameterService;

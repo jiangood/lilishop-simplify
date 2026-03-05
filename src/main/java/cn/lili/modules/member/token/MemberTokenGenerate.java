@@ -1,9 +1,9 @@
 package cn.lili.modules.member.token;
 
+import cn.hutool.extra.spring.SpringUtil;
 import cn.lili.common.context.ThreadContextHolder;
 import cn.lili.common.enums.ClientTypeEnum;
-import cn.lili.common.message.Topic;
-import cn.lili.framework.queue.MessageQueueTemplate;
+import cn.lili.common.event.MemberEvent;
 import cn.lili.common.security.AuthUser;
 import cn.lili.common.security.enums.UserEnums;
 import cn.lili.common.security.token.Token;
@@ -28,8 +28,6 @@ import static cn.lili.rocketmq.tags.MemberTagsEnum.MEMBER_LOGIN;
 public class MemberTokenGenerate extends AbstractTokenGenerate<Member> {
     @Autowired
     private TokenUtil tokenUtil;
-    @Autowired
-    private MessageQueueTemplate messageQueueTemplate;
 
     @Override
     public Token createToken(Member member, Boolean longTerm) {
@@ -51,9 +49,7 @@ public class MemberTokenGenerate extends AbstractTokenGenerate<Member> {
         //记录最后登录时间，客户端类型
         member.setLastLoginDate(new Date());
         member.setClientEnum(clientTypeEnum.name());
-        if (messageQueueTemplate != null) {
-            messageQueueTemplate.send(Topic.MEMBER, MEMBER_LOGIN.name(), member);
-        }
+            SpringUtil.publishEvent(new MemberEvent(MEMBER_LOGIN, member));
 
         AuthUser authUser = AuthUser.builder()
                 .username(member.getUsername())

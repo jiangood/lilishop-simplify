@@ -4,13 +4,12 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.map.MapUtil;
 import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.core.util.NumberUtil;
+import cn.hutool.extra.spring.SpringUtil;
 import cn.lili.cache.Cache;
 import cn.lili.cache.CachePrefix;
 import cn.lili.common.enums.ResultCode;
-import cn.lili.framework.queue.TransactionCommitSendMessageEvent;
+import cn.lili.common.event.GoodsEvent;
 import cn.lili.common.exception.ServiceException;
-import cn.lili.common.message.Topic;
-import cn.lili.framework.queue.MessageQueueTemplate;
 import cn.lili.common.security.AuthUser;
 import cn.lili.common.security.context.UserContext;
 import cn.lili.common.security.enums.UserEnums;
@@ -24,7 +23,6 @@ import cn.lili.modules.goods.entity.vos.GoodsNumVO;
 import cn.lili.modules.goods.entity.vos.GoodsSkuVO;
 import cn.lili.modules.goods.entity.vos.GoodsVO;
 import cn.lili.modules.goods.mapper.GoodsMapper;
-import cn.lili.modules.goods.service.*;
 import cn.lili.modules.member.entity.dto.EvaluationQueryParams;
 import cn.lili.modules.member.entity.enums.EvaluationGradeEnum;
 import cn.lili.modules.member.service.MemberEvaluationService;
@@ -103,15 +101,8 @@ public class GoodsService extends ServiceImpl<GoodsMapper, Goods>  {
     @Autowired
     @Lazy
     private MemberEvaluationService memberEvaluationService;
-    /**
-     * message queue
-     */
-    @Autowired
-    private MessageQueueTemplate messageQueueTemplate;
 
 
-    @Autowired
-    private ApplicationEventPublisher applicationEventPublisher;
     @Autowired
     private FreightTemplateService freightTemplateService;
 
@@ -136,8 +127,7 @@ public class GoodsService extends ServiceImpl<GoodsMapper, Goods>  {
         //下架店铺下的商品
         this.updateGoodsMarketAbleByStoreId(storeId, GoodsStatusEnum.DOWN, "店铺关闭");
 
-        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(Topic.GOODS, DOWN.name(), list));
-
+        SpringUtil.publishEvent(new GoodsEvent(DOWN, list));
     }
 
     /**
@@ -373,8 +363,7 @@ public class GoodsService extends ServiceImpl<GoodsMapper, Goods>  {
             //删除之前的缓存
             goodsCacheKeys.add(CachePrefix.GOODS.getPrefix() + goodsId);
             //商品审核消息
-            //发送mq消息
-            messageQueueTemplate.send(Topic.GOODS, GOODS_AUDIT.name(), goods);
+            SpringUtil.publishEvent(new GoodsEvent(GOODS_AUDIT, goods));
         }
         cache.multiDel(goodsCacheKeys);
         return result;
@@ -555,7 +544,8 @@ public class GoodsService extends ServiceImpl<GoodsMapper, Goods>  {
         this.goodsSkuService.updateGoodsSkuGrade(goodsId, grade, goods.getCommentNum());
 
         Map<String, Object> updateIndexFieldsMap = EsIndexUtil.getUpdateIndexFieldsMap(MapUtil.builder(new HashMap<String, Object>()).put("goodsId", goodsId).build(), MapUtil.builder(new HashMap<String, Object>()).put("commentNum", goods.getCommentNum()).put("highPraiseNum", highPraiseNum).put("grade", grade).build());
-        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(Topic.GOODS, UPDATE_GOODS_INDEX_FIELD.name(), updateIndexFieldsMap));
+
+        SpringUtil.publishEvent(new GoodsEvent(UPDATE_GOODS_INDEX_FIELD, updateIndexFieldsMap));
     }
 
     /**
@@ -631,7 +621,7 @@ public class GoodsService extends ServiceImpl<GoodsMapper, Goods>  {
 
         //下架商品发送消息
         if (goodsStatusEnum.equals(GoodsStatusEnum.DOWN)) {
-            applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(Topic.GOODS, DOWN.name(), goodsIds));
+            SpringUtil.publishEvent(new GoodsEvent(DOWN, goodsIds));
         }
     }
 
@@ -646,7 +636,8 @@ public class GoodsService extends ServiceImpl<GoodsMapper, Goods>  {
         if (!GoodsStatusEnum.UPPER.name().equals(goods.getMarketEnable()) || !GoodsAuthEnum.PASS.name().equals(goods.getAuthFlag())) {
             return;
         }
-        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(Topic.GOODS, "GENERATOR_GOODS_INDEX", goods.getId()));
+
+        SpringUtil.publishEvent(new GoodsEvent(GENERATOR_GOODS_INDEX,  goods.getId()));
     }
 
     /**
@@ -656,7 +647,8 @@ public class GoodsService extends ServiceImpl<GoodsMapper, Goods>  {
      */
     @Transactional
     public void updateEsGoods(List<String> goodsIds) {
-        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(Topic.GOODS, "UPDATE_GOODS_INDEX", goodsIds));
+        SpringUtil.publishEvent(new GoodsEvent(UPDATE_GOODS_INDEX, goodsIds));
+
     }
 
     /**
@@ -666,7 +658,8 @@ public class GoodsService extends ServiceImpl<GoodsMapper, Goods>  {
      */
     @Transactional
     public void deleteEsGoods(List<String> goodsIds) {
-        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(Topic.GOODS, "GOODS_DELETE", JSON.toJSONString(goodsIds)));
+        SpringUtil.publishEvent(new GoodsEvent(GOODS_DELETE, goodsIds));
+
     }
 
     /**

@@ -2,12 +2,13 @@ package cn.lili.modules.store.service;
 
 import cn.hutool.core.date.DateTime;
 import cn.hutool.core.text.CharSequenceUtil;
+import cn.hutool.extra.spring.SpringUtil;
 import cn.lili.cache.Cache;
 import cn.lili.cache.CachePrefix;
 import cn.lili.common.enums.ResultCode;
+import cn.lili.common.event.StoreEvent;
 import cn.lili.common.exception.ServiceException;
 import cn.lili.common.message.Topic;
-import cn.lili.framework.queue.MessageQueueTemplate;
 import cn.lili.common.security.AuthUser;
 import cn.lili.common.security.context.UserContext;
 import cn.lili.common.security.enums.UserEnums;
@@ -89,8 +90,7 @@ public class StoreService extends ServiceImpl<StoreMapper, Store>  {
     private StoreDetailService storeDetailService;
 
 
-    @Autowired
-    private MessageQueueTemplate messageQueueTemplate;
+
 
     @Autowired
     @Lazy
@@ -184,7 +184,7 @@ public class StoreService extends ServiceImpl<StoreMapper, Store>  {
                 storeDetailService.updateStoreGoodsInfo(store);
             }
             //发送订单变更mq消息
-            messageQueueTemplate.send(Topic.STORE, StoreTagsEnum.EDIT_STORE_SETTING.name(),store);
+            SpringUtil.publishEvent(new StoreEvent(StoreTagsEnum.EDIT_STORE_SETTING,store));
         }
 
         cache.remove(CachePrefix.STORE.getPrefix() + storeEditDTO.getStoreId());

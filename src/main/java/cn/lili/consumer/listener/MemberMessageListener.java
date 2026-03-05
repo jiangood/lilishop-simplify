@@ -1,9 +1,7 @@
 package cn.lili.consumer.listener;
 
 import cn.hutool.json.JSONUtil;
-import cn.lili.common.message.Topic;
-import cn.lili.framework.queue.MessageQueue;
-import cn.lili.framework.queue.MessageQueueListener;
+import cn.lili.common.event.MemberEvent;
 import cn.lili.consumer.event.*;
 import cn.lili.modules.connect.entity.dto.MemberConnectLoginMessage;
 import cn.lili.modules.member.entity.dos.Member;
@@ -14,6 +12,7 @@ import cn.lili.modules.wallet.entity.dto.MemberWithdrawalMessage;
 import cn.lili.rocketmq.tags.MemberTagsEnum;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -26,12 +25,9 @@ import java.util.List;
  **/
 @Component
 @Slf4j
-public class MemberMessageListener implements MessageQueueListener {
+public class MemberMessageListener  {
 
-    @Override
-    public Topic getTopic() {
-        return Topic.MEMBER;
-    }
+
     /**
      * 会员签到
      */
@@ -63,18 +59,20 @@ public class MemberMessageListener implements MessageQueueListener {
     @Autowired
     private List<MemberConnectLoginEvent> memberConnectLoginEvents;
 
-    @Override
-    public void onMessage(MessageQueue messageExt) {
-        switch (MemberTagsEnum.valueOf(messageExt.getTag())) {
+    @EventListener(MemberEvent.class)
+    public void onMessage(MemberEvent evt) {
+     MemberTagsEnum tagsEnum = evt.getTag();
+     String body = evt.getBody();
+     switch (tagsEnum) {
             //会员注册
             case MEMBER_REGISTER:
                 for (MemberRegisterEvent memberRegisterEvent : memberSignEvents) {
                     try {
-                        Member member = JSONUtil.toBean(new String(messageExt.getBody()), Member.class);
+                        Member member = JSONUtil.toBean(body, Member.class);
                         memberRegisterEvent.memberRegister(member);
                     } catch (Exception e) {
                         log.error("会员{},在{}业务中，状态修改事件执行异常",
-                                new String(messageExt.getBody()),
+                                body,
                                 memberRegisterEvent.getClass().getName(),
                                 e);
                     }
@@ -85,11 +83,11 @@ public class MemberMessageListener implements MessageQueueListener {
 
                 for (MemberLoginEvent memberLoginEvent : memberLoginEvents) {
                     try {
-                        Member member = JSONUtil.toBean(new String(messageExt.getBody()), Member.class);
+                        Member member = JSONUtil.toBean(body, Member.class);
                         memberLoginEvent.memberLogin(member);
                     } catch (Exception e) {
                         log.error("会员{},在{}业务中，状态修改事件执行异常",
-                                new String(messageExt.getBody()),
+                                body,
                                 memberLoginEvent.getClass().getName(),
                                 e);
                     }
@@ -97,18 +95,18 @@ public class MemberMessageListener implements MessageQueueListener {
                 break;
             //会员签到
             case MEMBER_SING:
-                MemberSign memberSign = JSONUtil.toBean(new String(messageExt.getBody()), MemberSign.class);
+                MemberSign memberSign = JSONUtil.toBean(body, MemberSign.class);
                 memberSignService.memberSignSendPoint(memberSign.getMemberId(), memberSign.getSignDay());
                 break;
             //会员积分变动
             case MEMBER_POINT_CHANGE:
                 for (MemberPointChangeEvent memberPointChangeEvent : memberPointChangeEvents) {
                     try {
-                        MemberPointMessage memberPointMessage = JSONUtil.toBean(new String(messageExt.getBody()), MemberPointMessage.class);
+                        MemberPointMessage memberPointMessage = JSONUtil.toBean(body, MemberPointMessage.class);
                         memberPointChangeEvent.memberPointChange(memberPointMessage);
                     } catch (Exception e) {
                         log.error("会员{},在{}业务中，状态修改事件执行异常",
-                                new String(messageExt.getBody()),
+                                body,
                                 memberPointChangeEvent.getClass().getName(),
                                 e);
                     }
@@ -118,11 +116,11 @@ public class MemberMessageListener implements MessageQueueListener {
             case MEMBER_INFO_EDIT:
                 for (MemberInfoChangeEvent memberInfoChangeEvent : memberInfoChangeEvents) {
                     try {
-                        Member member = JSONUtil.toBean(new String(messageExt.getBody()), Member.class);
+                        Member member = JSONUtil.toBean(body, Member.class);
                         memberInfoChangeEvent.memberInfoChange(member);
                     } catch (Exception e) {
                         log.error("会员{},在{}业务中，提现事件执行异常",
-                                new String(messageExt.getBody()),
+                                body,
                                 memberInfoChangeEvent.getClass().getName(),
                                 e);
                     }
@@ -132,11 +130,11 @@ public class MemberMessageListener implements MessageQueueListener {
             case MEMBER_WITHDRAWAL:
                 for (MemberWithdrawalEvent memberWithdrawalEvent : memberWithdrawalEvents) {
                     try {
-                        MemberWithdrawalMessage memberWithdrawalMessage = JSONUtil.toBean(new String(messageExt.getBody()), MemberWithdrawalMessage.class);
+                        MemberWithdrawalMessage memberWithdrawalMessage = JSONUtil.toBean(body, MemberWithdrawalMessage.class);
                         memberWithdrawalEvent.memberWithdrawal(memberWithdrawalMessage);
                     } catch (Exception e) {
                         log.error("会员{},在{}业务中，提现事件执行异常",
-                                new String(messageExt.getBody()),
+                                body,
                                 memberWithdrawalEvent.getClass().getName(),
                                 e);
                     }
@@ -146,11 +144,11 @@ public class MemberMessageListener implements MessageQueueListener {
             case MEMBER_CONNECT_LOGIN:
                 for (MemberConnectLoginEvent memberConnectLoginEvent : memberConnectLoginEvents) {
                     try {
-                        MemberConnectLoginMessage memberConnectLoginMessage = JSONUtil.toBean(new String(messageExt.getBody()), MemberConnectLoginMessage.class);
+                        MemberConnectLoginMessage memberConnectLoginMessage = JSONUtil.toBean(body, MemberConnectLoginMessage.class);
                         memberConnectLoginEvent.memberConnectLogin(memberConnectLoginMessage.getMember(), memberConnectLoginMessage.getConnectAuthUser());
                     } catch (Exception e) {
                         log.error("会员{},在{}业务中，状态修改事件执行异常",
-                                new String(messageExt.getBody()),
+                                body,
                                 memberConnectLoginEvent.getClass().getName(),
                                 e);
                     }

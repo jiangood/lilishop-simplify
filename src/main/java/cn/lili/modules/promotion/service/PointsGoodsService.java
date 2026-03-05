@@ -2,6 +2,8 @@ package cn.lili.modules.promotion.service;
 
 import cn.hutool.core.map.MapUtil;
 import cn.hutool.core.text.CharSequenceUtil;
+import cn.hutool.extra.spring.SpringUtil;
+import cn.lili.common.event.GoodsEvent;
 import cn.lili.common.message.Topic;
 import cn.lili.rocketmq.tags.GoodsTagsEnum;
 import cn.lili.common.enums.PromotionTypeEnum;
@@ -21,7 +23,6 @@ import cn.lili.modules.search.utils.EsIndexUtil;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import lombok.extern.slf4j.Slf4j;
-import cn.lili.framework.queue.MessageQueueTemplate;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -50,14 +51,7 @@ public class PointsGoodsService extends AbstractPromotionsServiceImpl<PointsGood
     @Autowired
     private GoodsSkuService goodsSkuService;
 
-    /**
-     * MessageQueueTemplate
-     */
-    @Autowired
-    private MessageQueueTemplate messageQueueTemplate;
 
-
-    
     @Transactional(rollbackFor = Exception.class)
     public boolean savePointsGoodsBatch(List<PointsGoods> promotionsList) {
         List<PromotionGoods> promotionGoodsList = new ArrayList<>();
@@ -219,9 +213,10 @@ public class PointsGoodsService extends AbstractPromotionsServiceImpl<PointsGood
         super.updateEsGoodsIndex(promotions);
         Map<String, Object> query = MapUtil.builder(new HashMap<String, Object>()).put("id", promotions.getSkuId()).build();
         Map<String, Object> update = MapUtil.builder(new HashMap<String, Object>()).put("points", promotions.getPoints()).build();
+
         //修改规格索引,发送mq消息
         Map<String, Object> updateIndexFieldsMap = EsIndexUtil.getUpdateIndexFieldsMap(query, update);
-        messageQueueTemplate.send(Topic.GOODS, GoodsTagsEnum.UPDATE_GOODS_INDEX_FIELD.name(),updateIndexFieldsMap);
+        SpringUtil.publishEvent(new GoodsEvent(GoodsTagsEnum.UPDATE_GOODS_INDEX_PROMOTIONS, updateIndexFieldsMap));
     }
 
 

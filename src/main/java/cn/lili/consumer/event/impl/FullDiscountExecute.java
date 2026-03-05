@@ -1,9 +1,11 @@
 package cn.lili.consumer.event.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.extra.spring.SpringUtil;
 import cn.hutool.json.JSONUtil;
 import cn.lili.cache.Cache;
 import cn.lili.cache.CachePrefix;
+import cn.lili.common.event.OrderEvent;
 import cn.lili.common.message.Topic;
 import cn.lili.common.security.enums.UserEnums;
 import cn.lili.common.utils.SnowFlake;
@@ -30,7 +32,6 @@ import cn.lili.modules.promotion.service.MemberCouponService;
 
 
 import lombok.extern.slf4j.Slf4j;
-import cn.lili.framework.queue.MessageQueueTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -72,8 +73,6 @@ public class FullDiscountExecute implements TradeEvent, OrderStatusChangeEvent {
     @Autowired
     private GoodsSkuService goodsSkuService;
 
-    @Autowired
-    private MessageQueueTemplate messageQueueTemplate;
 
     @Override
     public void orderCreate(TradeDTO tradeDTO) {
@@ -244,6 +243,6 @@ public class FullDiscountExecute implements TradeEvent, OrderStatusChangeEvent {
         orderMessage.setNewStatus(OrderStatusEnum.PAID);
 
         //发送订单变更mq消息
-        messageQueueTemplate.send(Topic.ORDER, STATUS_CHANGE.name(),orderMessage);
+        SpringUtil.publishEvent(new OrderEvent( STATUS_CHANGE,orderMessage));
     }
 }

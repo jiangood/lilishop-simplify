@@ -7,6 +7,8 @@ import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.map.MapBuilder;
 import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.core.util.ArrayUtil;
+import cn.hutool.extra.spring.SpringUtil;
+import cn.lili.common.event.GoodsEvent;
 import cn.lili.common.message.Topic;
 import cn.lili.common.enums.PromotionTypeEnum;
 import cn.lili.common.enums.ResultCode;
@@ -29,7 +31,6 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
-import cn.lili.framework.queue.MessageQueueTemplate;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -64,14 +65,7 @@ public class SeckillService extends AbstractPromotionsServiceImpl<SeckillMapper,
     @Autowired
     private SeckillApplyService seckillApplyService;
 
-    /**
-     * MessageQueueTemplate
-     */
-    @Autowired
-    private MessageQueueTemplate messageQueueTemplate;
 
-
-    
     public SeckillVO getSeckillDetail(String id) {
         Seckill seckill = this.checkSeckillExist(id);
         SeckillVO seckillVO = new SeckillVO();
@@ -194,7 +188,7 @@ public class SeckillService extends AbstractPromotionsServiceImpl<SeckillMapper,
         Map<Object, Object> build = MapBuilder.create().put("promotionKey", this.getPromotionType() + "-" + seckill.getId()).put("scopeId", ArrayUtil.join(skuIds.toArray(), ",")).build();
         //删除商品促销消息
         //发送mq消息
-        messageQueueTemplate.send(Topic.GOODS,GoodsTagsEnum.DELETE_GOODS_INDEX_PROMOTIONS.name(), build);
+        SpringUtil.publishEvent(new GoodsEvent(GoodsTagsEnum.DELETE_GOODS_INDEX_PROMOTIONS, build));
     }
 
     

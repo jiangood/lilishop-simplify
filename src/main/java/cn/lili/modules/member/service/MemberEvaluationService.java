@@ -3,10 +3,11 @@ package cn.lili.modules.member.service;
 import cn.hutool.core.date.DateTime;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.text.CharSequenceUtil;
+import cn.hutool.extra.spring.SpringUtil;
 import cn.hutool.json.JSONUtil;
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.enums.SwitchEnum;
-import cn.lili.framework.queue.TransactionCommitSendMessageEvent;
+import cn.lili.common.event.GoodsEvent;
 import cn.lili.common.exception.ServiceException;
 import cn.lili.common.message.Topic;
 import cn.lili.common.security.context.UserContext;
@@ -145,8 +146,7 @@ public class MemberEvaluationService extends ServiceImpl<MemberEvaluationMapper,
         //修改订单货物评价状态为已评价
         orderItemService.updateCommentStatus(orderItem.getSn(), CommentStatusEnum.FINISHED);
         //发送商品评价消息
-        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(
-                Topic.GOODS, GoodsTagsEnum.GOODS_COMMENT_COMPLETE.name(), JSONUtil.toJsonStr(memberEvaluation)));
+        SpringUtil.publishEvent(new GoodsEvent(GoodsTagsEnum.GOODS_COMMENT_COMPLETE,memberEvaluation));
         return memberEvaluationDTO;
     }
 

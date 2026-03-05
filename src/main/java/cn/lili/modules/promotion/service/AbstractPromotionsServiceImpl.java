@@ -3,19 +3,16 @@ package cn.lili.modules.promotion.service;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.map.MapBuilder;
 import cn.hutool.core.text.CharSequenceUtil;
-import cn.hutool.json.JSONUtil;
+import cn.hutool.extra.spring.SpringUtil;
 import cn.lili.common.enums.ResultCode;
-import cn.lili.framework.queue.TransactionCommitSendMessageEvent;
+import cn.lili.common.event.GoodsEvent;
 import cn.lili.common.exception.ServiceException;
-import cn.lili.common.message.Topic;
 import cn.lili.common.vo.PageVO;
 import cn.lili.modules.promotion.entity.dos.BasePromotions;
 import cn.lili.modules.promotion.entity.dos.PromotionGoods;
 import cn.lili.modules.promotion.entity.dto.search.BasePromotionsSearchParams;
 import cn.lili.modules.promotion.entity.enums.PromotionsScopeTypeEnum;
 import cn.lili.modules.promotion.entity.enums.PromotionsStatusEnum;
-import cn.lili.modules.promotion.service.AbstractPromotionsService;
-import cn.lili.modules.promotion.service.PromotionGoodsService;
 import cn.lili.modules.promotion.tools.PromotionTools;
 import cn.lili.mybatis.util.PageUtil;
 import cn.lili.rocketmq.tags.GoodsTagsEnum;
@@ -24,12 +21,12 @@ import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.transaction.annotation.Transactional;
 
-import jakarta.validation.constraints.NotNull;
 import java.util.*;
 
 import static cn.lili.modules.promotion.tools.PromotionTools.queryPromotionStatus;
@@ -256,7 +253,7 @@ public abstract class AbstractPromotionsServiceImpl<M extends BaseMapper<T>, T e
         if (promotions.getStartTime() == null && promotions.getEndTime() == null) {
             Map<Object, Object> build = MapBuilder.create().put("promotionKey", this.getPromotionType() + "-" + promotions.getId()).put("scopeId", promotions.getScopeId()).build();
             //删除商品促销消息
-            applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(Topic.GOODS, GoodsTagsEnum.DELETE_GOODS_INDEX_PROMOTIONS.name(), build));
+            SpringUtil.publishEvent(new GoodsEvent( GoodsTagsEnum.DELETE_GOODS_INDEX_PROMOTIONS, build));
         } else {
             this.sendUpdateEsGoodsMsg(promotions);
         }
@@ -274,7 +271,7 @@ public abstract class AbstractPromotionsServiceImpl<M extends BaseMapper<T>, T e
         map.put("promotionsType", promotions.getClass().getName());
         // 促销实体
         map.put("promotions", promotions);
-        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(Topic.GOODS, GoodsTagsEnum.UPDATE_GOODS_INDEX_PROMOTIONS.name(), JSONUtil.toJsonStr(map)));
+        SpringUtil.publishEvent(new GoodsEvent(GoodsTagsEnum.UPDATE_GOODS_INDEX_PROMOTIONS, map));
     }
 
     @Override

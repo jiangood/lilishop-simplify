@@ -1,15 +1,13 @@
 package cn.lili.modules.sms.service;
 
-import cn.lili.common.message.Topic;
+import cn.hutool.extra.spring.SpringUtil;
+import cn.lili.common.event.OtherEvent;
 import cn.lili.common.utils.BeanUtil;
 import cn.lili.modules.sms.entity.dos.SmsReach;
 import cn.lili.modules.sms.entity.dto.SmsReachDTO;
 import cn.lili.modules.sms.mapper.SmsReachMapper;
-import cn.lili.modules.sms.service.SmsReachService;
 import cn.lili.rocketmq.tags.OtherTagsEnum;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import cn.lili.framework.queue.MessageQueueTemplate;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,11 +21,8 @@ import java.util.List;
  */
 @Service
 public class SmsReachService extends ServiceImpl<SmsReachMapper, SmsReach>  {
-    @Autowired
-    private MessageQueueTemplate messageQueueTemplate;
 
 
-    
     @Transactional(rollbackFor = Exception.class)
     public void addSmsReach(SmsReach smsReach,List<String> mobile) {
         SmsReachDTO smsReachDTO = new SmsReachDTO();
@@ -35,7 +30,7 @@ public class SmsReachService extends ServiceImpl<SmsReachMapper, SmsReach>  {
         smsReachDTO.setMobile(mobile);
         this.save(smsReach);
         //发送短信批量发送mq消息
-        messageQueueTemplate.send(Topic.NOTICE_SEND, OtherTagsEnum.SMS.name(),smsReachDTO);
+        SpringUtil.publishEvent(new OtherEvent( OtherTagsEnum.SMS,smsReachDTO));
 
     }
 }

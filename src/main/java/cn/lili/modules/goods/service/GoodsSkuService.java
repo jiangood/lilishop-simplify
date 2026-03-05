@@ -3,14 +3,14 @@ package cn.lili.modules.goods.service;
 import cn.hutool.core.convert.Convert;
 import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.core.util.NumberUtil;
+import cn.hutool.extra.spring.SpringUtil;
 import cn.lili.cache.Cache;
 import cn.lili.cache.CachePrefix;
 import cn.lili.common.enums.PromotionTypeEnum;
 import cn.lili.common.enums.ResultCode;
-import cn.lili.framework.queue.TransactionCommitSendMessageEvent;
+import cn.lili.common.event.GoodsEvent;
 import cn.lili.common.exception.ServiceException;
 
-import cn.lili.common.message.Topic;
 import cn.lili.common.security.AuthUser;
 import cn.lili.common.security.context.UserContext;
 import cn.lili.common.utils.SnowFlake;
@@ -65,7 +65,6 @@ import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.ss.util.CellRangeAddressList;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import cn.lili.framework.queue.MessageQueueTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
@@ -106,11 +105,6 @@ public class GoodsSkuService extends ServiceImpl<GoodsSkuMapper, GoodsSku>  {
      */
     @Autowired
     private GoodsGalleryService goodsGalleryService;
-    /**
-     * message queue
-     */
-    @Autowired
-    private MessageQueueTemplate messageQueueTemplate;
     /**
      * 商品
      */
@@ -201,7 +195,8 @@ public class GoodsSkuService extends ServiceImpl<GoodsSkuMapper, GoodsSku>  {
             goodsGalleryService.removeByGoodsId(goods.getId());
 
             //发送mq消息
-            messageQueueTemplate.send(Topic.GOODS, SKU_DELETE.name(), oldSkuIds);
+            SpringUtil.publishEvent(new GoodsEvent(SKU_DELETE, oldSkuIds));
+
         } else {
             skuList = new ArrayList<>();
             for (Map<String, Object> map : goodsOperationDTO.getSkuList()) {
@@ -298,14 +293,14 @@ public class GoodsSkuService extends ServiceImpl<GoodsSkuMapper, GoodsSku>  {
         //如果使用商品ID无法查询SKU则返回错误
         if (goodsVO == null || goodsSku == null) {
             //发送mq消息
-            messageQueueTemplate.send(Topic.GOODS, GOODS_DELETE.name(), Collections.singletonList(goodsId));
+            SpringUtil.publishEvent(new GoodsEvent(GOODS_DELETE, Collections.singletonList(goodsId)));
             throw new ServiceException(ResultCode.GOODS_NOT_EXIST);
         }
 
         //商品下架||商品未审核通过||商品删除，则提示：商品已下架
         if (GoodsStatusEnum.DOWN.name().equals(goodsVO.getMarketEnable()) || !GoodsAuthEnum.PASS.name().equals(goodsVO.getAuthFlag()) || Boolean.TRUE.equals(goodsVO.getDeleteFlag())) {
-            String destination = "goods:" + "GOODS_DELETE";
-            messageQueueTemplate.send(Topic.GOODS, GOODS_DELETE.name(), Collections.singletonList(goodsId));
+            SpringUtil.publishEvent(new GoodsEvent(GOODS_DELETE, Collections.singletonList(goodsId)));
+
             throw new ServiceException(ResultCode.GOODS_NOT_EXIST);
         }
 
@@ -384,7 +379,7 @@ public class GoodsSkuService extends ServiceImpl<GoodsSkuMapper, GoodsSku>  {
         //记录用户足迹
         if (currentUser != null) {
             FootPrint footPrint = new FootPrint(currentUser.getId(), goodsIndex.getStoreId(), goodsId, skuId);
-            messageQueueTemplate.send(Topic.GOODS, VIEW_GOODS.name(), footPrint);
+            SpringUtil.publishEvent(new GoodsEvent(VIEW_GOODS, footPrint));
         }
         return map;
     }
@@ -432,13 +427,10 @@ public class GoodsSkuService extends ServiceImpl<GoodsSkuMapper, GoodsSku>  {
         boolean update = this.update(updateWrapper);
         if (Boolean.TRUE.equals(update)) {
             if (GoodsStatusEnum.UPPER.name().equals(marketEnable)) {
-                applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(
-                        Topic.GOODS, GENERATOR_STORE_GOODS_INDEX.name(),
-                        storeId));
+                SpringUtil.publishEvent(new GoodsEvent(GENERATOR_STORE_GOODS_INDEX, storeId));
             } else if (GoodsStatusEnum.DOWN.name().equals(marketEnable)) {
                 cache.vagueDel(CachePrefix.GOODS_SKU.getPrefix());
-                applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(
-                        Topic.GOODS, STORE_GOODS_DELETE.name(), storeId));
+                SpringUtil.publishEvent(new GoodsEvent(STORE_GOODS_DELETE, storeId));
             }
         }
     }
@@ -746,7 +738,7 @@ public class GoodsSkuService extends ServiceImpl<GoodsSkuMapper, GoodsSku>  {
             if (isFlag && quantity > 0 && CharSequenceUtil.equals(goodsSku.getMarketEnable(), GoodsStatusEnum.UPPER.name())) {
                 List<String> goodsIds = new ArrayList<>();
                 goodsIds.add(goodsSku.getGoodsId());
-                applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(Topic.GOODS, UPDATE_GOODS_INDEX.name(), goodsIds));
+                SpringUtil.publishEvent(new GoodsEvent(UPDATE_GOODS_INDEX, goodsIds));
             }
         }
     }
@@ -783,7 +775,7 @@ public class GoodsSkuService extends ServiceImpl<GoodsSkuMapper, GoodsSku>  {
             if (isFlag && quantity > 0 && CharSequenceUtil.equals(goodsSku.getMarketEnable(), GoodsStatusEnum.UPPER.name())) {
                 List<String> goodsIds = new ArrayList<>();
                 goodsIds.add(goodsSku.getGoodsId());
-                applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(Topic.GOODS, UPDATE_GOODS_INDEX.name(), goodsIds));
+                SpringUtil.publishEvent(new GoodsEvent(UPDATE_GOODS_INDEX, goodsIds));
             }
         }
     }

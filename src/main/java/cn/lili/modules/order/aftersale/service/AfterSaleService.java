@@ -2,10 +2,10 @@ package cn.lili.modules.order.aftersale.service;
 
 import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.core.util.NumberUtil;
+import cn.hutool.extra.spring.SpringUtil;
 import cn.lili.common.enums.ResultCode;
-import cn.lili.framework.queue.TransactionCommitSendMessageEvent;
+import cn.lili.common.event.AfterSaleEvent;
 import cn.lili.common.exception.ServiceException;
-import cn.lili.common.message.Topic;
 import cn.lili.common.security.AuthUser;
 import cn.lili.common.security.OperationalJudgment;
 import cn.lili.common.security.context.UserContext;
@@ -20,7 +20,6 @@ import cn.lili.modules.order.aftersale.entity.vo.AfterSaleNumVO;
 import cn.lili.modules.order.aftersale.entity.vo.AfterSaleSearchParams;
 import cn.lili.modules.order.aftersale.entity.vo.AfterSaleVO;
 import cn.lili.modules.order.aftersale.mapper.AfterSaleMapper;
-import cn.lili.modules.order.aftersale.service.AfterSaleService;
 import cn.lili.modules.order.order.entity.dos.Order;
 import cn.lili.modules.order.order.entity.dos.OrderItem;
 import cn.lili.modules.order.order.entity.enums.*;
@@ -46,7 +45,6 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -54,7 +52,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 /**
  * 售后业务层实现
@@ -91,11 +88,6 @@ public class AfterSaleService extends ServiceImpl<AfterSaleMapper, AfterSale>  {
     @Autowired
     private RefundSupport refundSupport;
 
-    @Autowired
-    private ApplicationEventPublisher applicationEventPublisher;
-
-
-    
     public IPage<AfterSaleVO> getAfterSalePages(AfterSaleSearchParams saleSearchParams) {
         return baseMapper.queryByParams(PageUtil.initPage(saleSearchParams), saleSearchParams.queryWrapper());
     }
@@ -625,8 +617,7 @@ public class AfterSaleService extends ServiceImpl<AfterSaleMapper, AfterSale>  {
      */
     @Transactional(rollbackFor = Exception.class)
     public void sendAfterSaleMessage(AfterSale afterSale) {
-        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(Topic.AFTER_SALE,
-                AfterSaleTagsEnum.AFTER_SALE_STATUS_CHANGE.name(), afterSale));
+        SpringUtil.publishEvent(new AfterSaleEvent(AfterSaleTagsEnum.AFTER_SALE_STATUS_CHANGE, afterSale));
     }
 
     // TODO 检查为啥没调用，参考原始逻辑
@@ -645,7 +636,7 @@ public class AfterSaleService extends ServiceImpl<AfterSaleMapper, AfterSale>  {
                         || afterSale.getServiceStatus().equals(AfterSaleStatusEnum.SELLER_CONFIRM.name())
                         || afterSale.getServiceStatus().equals(AfterSaleStatusEnum.WAIT_REFUND.name())
                         || afterSale.getServiceStatus().equals(AfterSaleStatusEnum.COMPLETE.name()))
-                .collect(Collectors.toList());
+                .toList();
 
         if (!implementList.isEmpty()) {
             //遍历售后记录获取售后商品数量
@@ -655,7 +646,7 @@ public class AfterSaleService extends ServiceImpl<AfterSaleMapper, AfterSale>  {
         //获取已完成售后订单数量
         List<AfterSale> completeList = afterSaleList.stream()
                 .filter(afterSale -> afterSale.getServiceStatus().equals(AfterSaleStatusEnum.COMPLETE.name()))
-                .collect(Collectors.toList());
+                .toList();
 
         if (!completeList.isEmpty()) {
             //遍历售后记录获取已完成售后商品数量

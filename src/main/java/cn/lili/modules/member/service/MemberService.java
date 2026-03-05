@@ -3,16 +3,15 @@ package cn.lili.modules.member.service;
 
 import cn.hutool.core.convert.Convert;
 import cn.hutool.core.text.CharSequenceUtil;
+import cn.hutool.extra.spring.SpringUtil;
 import cn.lili.cache.Cache;
 import cn.lili.cache.CachePrefix;
 import cn.lili.common.aop.annotation.DemoSite;
 import cn.lili.common.context.ThreadContextHolder;
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.enums.SwitchEnum;
-import cn.lili.framework.queue.TransactionCommitSendMessageEvent;
+import cn.lili.common.event.MemberEvent;
 import cn.lili.common.exception.ServiceException;
-
-import cn.lili.common.message.Topic;
 import cn.lili.common.security.AuthUser;
 import cn.lili.common.security.context.UserContext;
 import cn.lili.common.security.enums.UserEnums;
@@ -33,15 +32,13 @@ import cn.lili.modules.member.entity.vo.MemberVO;
 import cn.lili.modules.member.entity.vo.QRCodeLoginSessionVo;
 import cn.lili.modules.member.entity.vo.QRLoginResultVo;
 import cn.lili.modules.member.mapper.MemberMapper;
-import cn.lili.modules.member.service.MemberService;
 import cn.lili.modules.member.token.MemberTokenGenerate;
 import cn.lili.modules.member.token.StoreTokenGenerate;
 import cn.lili.modules.store.entity.dos.Store;
 import cn.lili.modules.store.entity.enums.StoreStatusEnum;
 import cn.lili.modules.store.service.StoreService;
 import cn.lili.mybatis.util.PageUtil;
-
-
+import cn.lili.rocketmq.tags.MemberTagsEnum;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
@@ -49,7 +46,6 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
-import cn.lili.framework.queue.MessageQueueTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
@@ -98,14 +94,7 @@ public class MemberService extends ServiceImpl<MemberMapper, Member>  {
      */
     @Autowired
     private StoreService storeService;
-    /**
-     * 消息队列
-     */
-    @Autowired
-    private MessageQueueTemplate messageQueueTemplate;
 
-    @Autowired
-    private ApplicationEventPublisher applicationEventPublisher;
     /**
      * 缓存
      */
@@ -322,7 +311,7 @@ public class MemberService extends ServiceImpl<MemberMapper, Member>  {
         this.save(member);
         UserContext.settingInviter(member.getId(), cache);
         // 发送会员注册信息
-        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(Topic.MEMBER, MEMBER_REGISTER.name(), member));
+        SpringUtil.publishEvent(new MemberEvent(MEMBER_REGISTER, member));
     }
 
     
@@ -334,7 +323,7 @@ public class MemberService extends ServiceImpl<MemberMapper, Member>  {
         //修改会员
         this.updateById(member);
         //发送订单变更mq消息
-        messageQueueTemplate.send(Topic.MEMBER,MEMBER_INFO_EDIT.name(),  member);
+        SpringUtil.publishEvent( new MemberEvent(MEMBER_INFO_EDIT,  member));
         return member;
     }
 
@@ -548,7 +537,7 @@ public class MemberService extends ServiceImpl<MemberMapper, Member>  {
                 memberPointMessage.setPoint(point);
                 memberPointMessage.setType(type);
                 memberPointMessage.setMemberId(memberId);
-                applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(Topic.MEMBER, "MEMBER_POINT_CHANGE", memberPointMessage));
+                SpringUtil.publishEvent(new MemberEvent(MemberTagsEnum.MEMBER_POINT_CHANGE, memberPointMessage));
                 return true;
             }
             return false;

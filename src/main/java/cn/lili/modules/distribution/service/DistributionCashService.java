@@ -1,9 +1,9 @@
 package cn.lili.modules.distribution.service;
 
+import cn.hutool.extra.spring.SpringUtil;
 import cn.lili.common.enums.ResultCode;
+import cn.lili.common.event.MemberEvent;
 import cn.lili.common.exception.ServiceException;
-
-import cn.lili.common.message.Topic;
 import cn.lili.common.utils.CurrencyUtil;
 import cn.lili.common.utils.SnowFlake;
 import cn.lili.common.vo.PageVO;
@@ -12,28 +12,23 @@ import cn.lili.modules.distribution.entity.dos.DistributionCash;
 import cn.lili.modules.distribution.entity.enums.DistributionStatusEnum;
 import cn.lili.modules.distribution.entity.vos.DistributionCashSearchParams;
 import cn.lili.modules.distribution.mapper.DistributionCashMapper;
-import cn.lili.modules.distribution.service.DistributionCashService;
-import cn.lili.modules.distribution.service.DistributionService;
 import cn.lili.modules.wallet.entity.dto.MemberWithdrawalMessage;
 import cn.lili.modules.wallet.entity.enums.WithdrawStatusEnum;
 import cn.lili.mybatis.util.PageUtil;
-
-
 import cn.lili.rocketmq.tags.MemberTagsEnum;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.http.HttpServletResponse;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import cn.lili.framework.queue.MessageQueueTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import jakarta.servlet.ServletOutputStream;
 import java.net.URLEncoder;
 import java.util.Date;
 import java.util.List;
@@ -52,10 +47,8 @@ public class DistributionCashService extends ServiceImpl<DistributionCashMapper,
      */
     @Autowired
     private DistributionService distributionService;
-    @Autowired
-    private MessageQueueTemplate messageQueueTemplate;
 
-    
+
     @Transactional(rollbackFor = Exception.class)
     public Boolean cash(Double applyMoney) {
 
@@ -83,7 +76,7 @@ public class DistributionCashService extends ServiceImpl<DistributionCashMapper,
                 memberWithdrawalMessage.setMemberId(distribution.getMemberId());
                 memberWithdrawalMessage.setPrice(applyMoney);
                 memberWithdrawalMessage.setStatus(WithdrawStatusEnum.APPLY.name());
-                messageQueueTemplate.send(Topic.MEMBER, MemberTagsEnum.MEMBER_WITHDRAWAL.name(), memberWithdrawalMessage);
+                SpringUtil.publishEvent(new MemberEvent( MemberTagsEnum.MEMBER_WITHDRAWAL, memberWithdrawalMessage));
                 return true;
             }
             return false;

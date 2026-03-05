@@ -1,9 +1,10 @@
 package cn.lili.modules.member.service;
 
 import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.extra.spring.SpringUtil;
 import cn.lili.common.enums.ResultCode;
+import cn.lili.common.event.MemberEvent;
 import cn.lili.common.exception.ServiceException;
-import cn.lili.common.message.Topic;
 import cn.lili.common.security.AuthUser;
 import cn.lili.common.security.context.UserContext;
 import cn.lili.common.utils.CurrencyUtil;
@@ -11,8 +12,6 @@ import cn.lili.common.utils.DateUtil;
 import cn.lili.modules.member.entity.dos.MemberSign;
 import cn.lili.modules.member.entity.enums.PointTypeEnum;
 import cn.lili.modules.member.mapper.MemberSignMapper;
-import cn.lili.modules.member.service.MemberService;
-import cn.lili.modules.member.service.MemberSignService;
 import cn.lili.modules.system.entity.dos.Setting;
 import cn.lili.modules.system.entity.dto.PointSetting;
 import cn.lili.modules.system.entity.dto.PointSettingItem;
@@ -22,7 +21,6 @@ import cn.lili.rocketmq.tags.MemberTagsEnum;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.google.gson.Gson;
-import cn.lili.framework.queue.MessageQueueTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -37,11 +35,7 @@ import java.util.List;
 @Service
 public class MemberSignService extends ServiceImpl<MemberSignMapper, MemberSign>  {
 
-    /**
-     * MessageQueueTemplate
-     */
-    @Autowired
-    private MessageQueueTemplate messageQueueTemplate;
+
     /**
      * 配置
      */
@@ -87,7 +81,8 @@ public class MemberSignService extends ServiceImpl<MemberSignMapper, MemberSign>
             try {
                 this.baseMapper.insert(memberSign);
                 //签到成功后发送消息赠送积分
-                messageQueueTemplate.send(Topic.MEMBER, MemberTagsEnum.MEMBER_SING.name(), memberSign);
+                SpringUtil.publishEvent(new MemberEvent( MemberTagsEnum.MEMBER_SING, memberSign));
+
                 return true;
             } catch (Exception e) {
                 throw new ServiceException(ResultCode.MEMBER_SIGN_REPEAT);

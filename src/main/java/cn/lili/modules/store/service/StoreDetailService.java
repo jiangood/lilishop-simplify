@@ -2,10 +2,11 @@ package cn.lili.modules.store.service;
 
 import cn.hutool.core.date.DateTime;
 import cn.hutool.core.map.MapUtil;
+import cn.hutool.extra.spring.SpringUtil;
 import cn.lili.cache.Cache;
 import cn.lili.cache.CachePrefix;
-import cn.lili.common.message.Topic;
-import cn.lili.framework.queue.MessageQueueTemplate;
+import cn.lili.common.event.GoodsEvent;
+import cn.lili.common.event.StoreEvent;
 import cn.lili.common.security.AuthUser;
 import cn.lili.common.security.context.UserContext;
 import cn.lili.common.utils.BeanUtil;
@@ -24,8 +25,6 @@ import cn.lili.modules.store.entity.vos.StoreDetailVO;
 import cn.lili.modules.store.entity.vos.StoreManagementCategoryVO;
 import cn.lili.modules.store.entity.vos.StoreOtherVO;
 import cn.lili.modules.store.mapper.StoreDetailMapper;
-import cn.lili.modules.store.service.StoreDetailService;
-import cn.lili.modules.store.service.StoreService;
 import cn.lili.rocketmq.tags.GoodsTagsEnum;
 import cn.lili.rocketmq.tags.StoreTagsEnum;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -59,9 +58,6 @@ public class StoreDetailService extends ServiceImpl<StoreDetailMapper, StoreDeta
 
     @Autowired
     private GoodsService goodsService;
-
-    @Autowired
-    private MessageQueueTemplate messageQueueTemplate;
 
     @Autowired
     private Cache cache;
@@ -100,7 +96,7 @@ public class StoreDetailService extends ServiceImpl<StoreDetailMapper, StoreDeta
             this.removeCache(store.getId());
         }
         //发送订单变更mq消息
-        messageQueueTemplate.send(Topic.STORE, StoreTagsEnum.EDIT_STORE_SETTING.name(), store);
+        SpringUtil.publishEvent(new StoreEvent( StoreTagsEnum.EDIT_STORE_SETTING, store));
         return result;
     }
 
@@ -113,7 +109,8 @@ public class StoreDetailService extends ServiceImpl<StoreDetailMapper, StoreDeta
                 MapUtil.builder(new HashMap<String, Object>()).put("storeId", store.getId()).build(),
                 MapUtil.builder(new HashMap<String, Object>()).put("storeName", store.getStoreName()).put("selfOperated", store.getSelfOperated()).build());
         //发送mq消息
-        messageQueueTemplate.send(Topic.GOODS, GoodsTagsEnum.UPDATE_GOODS_INDEX_FIELD.name(), updateIndexFieldsMap);
+
+        SpringUtil.publishEvent(new GoodsEvent( GoodsTagsEnum.UPDATE_GOODS_INDEX_FIELD, updateIndexFieldsMap));
     }
 
     

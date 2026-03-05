@@ -5,11 +5,8 @@ import cn.hutool.core.map.MapUtil;
 import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.core.util.ArrayUtil;
 import cn.hutool.core.util.ClassLoaderUtil;
-import cn.lili.common.aop.annotation.RetryOperation;
+import cn.lili.common.event.GoodsEvent;
 import cn.lili.common.exception.RetryException;
-import cn.lili.common.message.Topic;
-import cn.lili.framework.queue.MessageQueue;
-import cn.lili.framework.queue.MessageQueueListener;
 import cn.lili.common.vo.PageVO;
 import cn.lili.consumer.event.GoodsCommentCompleteEvent;
 import cn.lili.modules.distribution.entity.dos.DistributionGoods;
@@ -42,6 +39,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -55,12 +53,9 @@ import java.util.stream.Collectors;
  **/
 @Component
 @Slf4j
-public class GoodsMessageListener implements MessageQueueListener {
+public class GoodsMessageListener {
 
-    @Override
-    public Topic getTopic() {
-        return Topic.GOODS;
-    }
+
     private static final int BATCH_SIZE = 10;
 
     /**
@@ -125,40 +120,41 @@ public class GoodsMessageListener implements MessageQueueListener {
     @Autowired
     private PromotionGoodsService promotionGoodsService;
 
-    @Override
-    @RetryOperation
-    public void onMessage(MessageQueue messageExt) {
 
-        switch (GoodsTagsEnum.valueOf(messageExt.getTag())) {
+    @EventListener(GoodsEvent.class)
+    public void onMessage(GoodsEvent evt) {
+        GoodsTagsEnum goodsTagsEnum = evt.getTag();
+        String body = evt.getBody();
+        switch (goodsTagsEnum) {
             //查看商品
             case VIEW_GOODS:
-                FootPrint footPrint = JSON.parseObject(new String(messageExt.getBody()), FootPrint.class);
+                FootPrint footPrint = JSON.parseObject(body, FootPrint.class);
                 footprintService.saveFootprint(footPrint);
                 break;
             //生成索引
             case GENERATOR_GOODS_INDEX:
                 try {
-                    String goodsId = new String(messageExt.getBody());
+                    String goodsId = body;
                     log.info("生成索引: {}", goodsId);
                     Goods goods = this.goodsService.getById(goodsId);
                     this.updateGoodsIndex(goods);
                 } catch (Exception e) {
-                    log.error("生成商品索引事件执行异常，商品信息: " + new String(messageExt.getBody()), e);
+                    log.error("生成商品索引事件执行异常，商品信息: " + body, e);
                 }
                 break;
             case GENERATOR_STORE_GOODS_INDEX:
                 try {
-                    String storeId = new String(messageExt.getBody());
+                    String storeId = body;
                     this.updateGoodsIndex(storeId);
                 } catch (Exception e) {
-                    log.error("生成店铺商品索引事件执行异常，商品信息: " + new String(messageExt.getBody()), e);
+                    log.error("生成店铺商品索引事件执行异常，商品信息: " + body, e);
                 }
                 break;
             case UPDATE_GOODS_INDEX_PROMOTIONS:
-                this.updateGoodsIndexPromotions(new String(messageExt.getBody()));
+                this.updateGoodsIndexPromotions(body);
                 break;
             case DELETE_GOODS_INDEX_PROMOTIONS:
-                JSONObject jsonObject = JSON.parseObject(new String(messageExt.getBody()));
+                JSONObject jsonObject = JSON.parseObject(body);
                 String promotionKey = jsonObject.getString("promotionKey");
                 if (CharSequenceUtil.isEmpty(promotionKey)) {
                     break;
@@ -171,36 +167,36 @@ public class GoodsMessageListener implements MessageQueueListener {
                 break;
             case UPDATE_GOODS_INDEX:
                 try {
-                    String goodsIdsJsonStr = new String(messageExt.getBody());
+                    String goodsIdsJsonStr = body;
                     GoodsSearchParams searchParams = new GoodsSearchParams();
                     searchParams.setId(ArrayUtil.join(JSON.parseArray(goodsIdsJsonStr, String.class).toArray(), ","));
                     List<Goods> goodsList = goodsService.queryListByParams(searchParams);
                     this.updateGoodsIndex(goodsList);
                 } catch (Exception e) {
-                    log.error("更新商品索引事件执行异常，商品信息: " + new String(messageExt.getBody()), e);
+                    log.error("更新商品索引事件执行异常，商品信息: " + body, e);
                 }
                 break;
             case UPDATE_GOODS_INDEX_FIELD:
                 try {
-                    String updateIndexFieldsJsonStr = new String(messageExt.getBody());
+                    String updateIndexFieldsJsonStr = body;
                     JSONObject updateIndexFields = JSON.parseObject(updateIndexFieldsJsonStr);
                     @SuppressWarnings("unchecked") Map<String, Object> queryFields = updateIndexFields.getObject("queryFields", Map.class);
                     @SuppressWarnings("unchecked") Map<String, Object> updateFields = updateIndexFields.getObject("updateFields", Map.class);
                     goodsIndexService.updateIndex(queryFields, updateFields);
                 } catch (Exception e) {
-                    log.error("更新商品索引事件执行异常，商品信息: " + new String(messageExt.getBody()), e);
+                    log.error("更新商品索引事件执行异常，商品信息: " + body, e);
                 }
                 break;
 
             //审核商品
             case GOODS_AUDIT:
-                Goods goods = JSON.parseObject(new String(messageExt.getBody()), Goods.class);
+                Goods goods = JSON.parseObject(body, Goods.class);
                 updateGoodsIndex(goods);
                 break;
             //删除商品
             case GOODS_DELETE:
                 try {
-                    String goodsIdsJsonStr = new String(messageExt.getBody());
+                    String goodsIdsJsonStr = body;
                     for (String goodsId : JSON.parseArray(goodsIdsJsonStr, String.class)) {
                          // Find all SKU IDs for this goods and delete them
                          List<GoodsSku> goodsSkus = goodsSkuService.getGoodsSkuListByGoodsId(goodsId);
@@ -212,22 +208,22 @@ public class GoodsMessageListener implements MessageQueueListener {
 
                     promotionService.removeByGoodsIds(goodsIdsJsonStr);
                 } catch (Exception e) {
-                    log.error("删除商品索引事件执行异常，商品信息: " + new String(messageExt.getBody()), e);
+                    log.error("删除商品索引事件执行异常，商品信息: " + body, e);
                 }
                 break;
             case DOWN:
-                String goodsIdsJsonStr = new String(messageExt.getBody());
+                String goodsIdsJsonStr = body;
                 promotionService.removeByGoodsIds(goodsIdsJsonStr);
                 break;
             //规格删除
             case SKU_DELETE:
-                String message = new String(messageExt.getBody());
+                String message = body;
                 List<String> skuIds = JSON.parseArray(message, String.class);
                 goodsCollectionService.deleteSkuCollection(skuIds);
                 break;
             case STORE_GOODS_DELETE:
                 try {
-                    String storeId = new String(messageExt.getBody());
+                    String storeId = body;
                     // Find all SKU IDs for this store and delete them
                     List<GoodsSku> storeGoodsSkus = goodsSkuService.getGoodsSkuListByGoodsId(storeId);
                     if (CollUtil.isNotEmpty(storeGoodsSkus)) {
@@ -237,32 +233,32 @@ public class GoodsMessageListener implements MessageQueueListener {
                 } catch (RetryException re) {
                     throw re;
                 } catch (Exception e) {
-                    log.error("删除店铺商品索引事件执行异常，商品信息: " + new String(messageExt.getBody()), e);
+                    log.error("删除店铺商品索引事件执行异常，商品信息: " + body, e);
                 }
                 break;
             //同步商品分类名称
             case CATEGORY_GOODS_NAME:
                 //分类ID
-                String id = new String(messageExt.getBody());
+                String id = body;
                 goodsService.categoryGoodsName(id);
                 break;
             //商品评价
             case GOODS_COMMENT_COMPLETE:
-                MemberEvaluation memberEvaluation = JSON.parseObject(new String(messageExt.getBody()), MemberEvaluation.class);
+                MemberEvaluation memberEvaluation = JSON.parseObject(body, MemberEvaluation.class);
                 for (GoodsCommentCompleteEvent goodsCommentCompleteEvent : goodsCommentCompleteEvents) {
                     try {
                         goodsCommentCompleteEvent.goodsComment(memberEvaluation);
                     } catch (Exception e) {
-                        log.error("评价{},在{}业务中，状态修改事件执行异常", new String(messageExt.getBody()), goodsCommentCompleteEvent.getClass().getName(), e);
+                        log.error("评价{},在{}业务中，状态修改事件执行异常", body, goodsCommentCompleteEvent.getClass().getName(), e);
                     }
                 }
                 break;
             //购买商品完成
             case BUY_GOODS_COMPLETE:
-                this.goodsBuyComplete(messageExt);
+                this.goodsBuyComplete(body);
                 break;
             default:
-                log.error("商品执行异常：{}", new String(messageExt.getBody()));
+                log.error("商品执行异常：{}", body);
                 break;
         }
     }
@@ -482,10 +478,9 @@ public class GoodsMessageListener implements MessageQueueListener {
      * 2.更新SKU购买数量
      * 3.更新索引购买数量
      *
-     * @param messageExt 信息体
      */
-    private void goodsBuyComplete(MessageQueue messageExt) {
-        String goodsCompleteMessageStr = new String(messageExt.getBody());
+    private void goodsBuyComplete(String body) {
+        String goodsCompleteMessageStr = body;
         List<GoodsCompleteMessage> goodsCompleteMessageList = JSON.parseArray(goodsCompleteMessageStr, GoodsCompleteMessage.class);
         for (GoodsCompleteMessage goodsCompleteMessage : goodsCompleteMessageList) {
             Goods goods = goodsService.getById(goodsCompleteMessage.getGoodsId());

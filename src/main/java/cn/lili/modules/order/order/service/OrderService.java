@@ -5,6 +5,7 @@ import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.extra.spring.SpringUtil;
 import cn.hutool.json.JSONUtil;
 import cn.hutool.poi.excel.ExcelReader;
 import cn.hutool.poi.excel.ExcelUtil;
@@ -12,10 +13,9 @@ import cn.hutool.poi.excel.ExcelWriter;
 import cn.lili.common.enums.ClientTypeEnum;
 import cn.lili.common.enums.PromotionTypeEnum;
 import cn.lili.common.enums.ResultCode;
-import cn.lili.framework.queue.TransactionCommitSendMessageEvent;
+import cn.lili.common.event.GoodsEvent;
+import cn.lili.common.event.OrderEvent;
 import cn.lili.common.exception.ServiceException;
-import cn.lili.common.message.Topic;
-import cn.lili.framework.queue.MessageQueueTemplate;
 import cn.lili.common.security.OperationalJudgment;
 import cn.lili.common.security.context.UserContext;
 import cn.lili.common.security.enums.UserEnums;
@@ -122,11 +122,7 @@ public class OrderService extends ServiceImpl<OrderMapper, Order>  {
      */
     @Autowired
     private OrderLogService orderLogService;
-    /**
-     * MessageQueueTemplate
-     */
-    @Autowired
-    private MessageQueueTemplate messageQueueTemplate;
+
     /**
      * 订单流水
      */
@@ -144,9 +140,6 @@ public class OrderService extends ServiceImpl<OrderMapper, Order>  {
     @Lazy
     private TradeService tradeService;
 
-
-    @Autowired
-    private ApplicationEventPublisher applicationEventPublisher;
 
     @Autowired
     private StoreDetailService storeDetailService;
@@ -634,7 +627,7 @@ public class OrderService extends ServiceImpl<OrderMapper, Order>  {
         //发送商品购买消息
         if (!goodsCompleteMessageList.isEmpty()) {
             //发送订单变更mq消息
-            messageQueueTemplate.send(Topic.GOODS, BUY_GOODS_COMPLETE.name(), goodsCompleteMessageList);
+            SpringUtil.publishEvent(new GoodsEvent(BUY_GOODS_COMPLETE, goodsCompleteMessageList));
         }
     }
 
@@ -647,8 +640,8 @@ public class OrderService extends ServiceImpl<OrderMapper, Order>  {
     
     @Transactional(rollbackFor = Exception.class)
     public void sendUpdateStatusMessage(OrderMessage orderMessage) {
-        applicationEventPublisher.publishEvent(new TransactionCommitSendMessageEvent(Topic.ORDER,
-                OrderTagsEnum.STATUS_CHANGE.name(), JSONUtil.toJsonStr(orderMessage)));
+        SpringUtil.publishEvent(new OrderEvent(
+                OrderTagsEnum.STATUS_CHANGE,orderMessage));
     }
 
     

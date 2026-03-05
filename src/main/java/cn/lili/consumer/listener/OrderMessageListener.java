@@ -2,9 +2,7 @@ package cn.lili.consumer.listener;
 
 import cn.hutool.json.JSONUtil;
 import cn.lili.cache.Cache;
-import cn.lili.common.message.Topic;
-import cn.lili.framework.queue.MessageQueue;
-import cn.lili.framework.queue.MessageQueueListener;
+import cn.lili.common.event.OrderEvent;
 import cn.lili.consumer.event.OrderStatusChangeEvent;
 import cn.lili.consumer.event.TradeEvent;
 import cn.lili.modules.order.cart.entity.dto.TradeDTO;
@@ -12,6 +10,7 @@ import cn.lili.modules.order.order.entity.dto.OrderMessage;
 import cn.lili.rocketmq.tags.OrderTagsEnum;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -24,12 +23,9 @@ import java.util.List;
  **/
 @Component
 @Slf4j
-public class OrderMessageListener implements MessageQueueListener {
+public class OrderMessageListener  {
 
-    @Override
-    public Topic getTopic() {
-        return Topic.ORDER;
-    }
+
 
     /**
      * 交易
@@ -47,10 +43,10 @@ public class OrderMessageListener implements MessageQueueListener {
     @Autowired
     private Cache<Object> cache;
 
-    @Override
-    public void onMessage(MessageQueue messageExt) {
+    @EventListener(OrderEvent.class)
+    public void onMessage(OrderEvent evt) {
         try {
-            this.orderStatusEvent(messageExt);
+            this.orderStatusEvent(evt);
         } catch (Exception e) {
             log.error("订单状态变更事件调用异常", e);
         }
@@ -58,14 +54,14 @@ public class OrderMessageListener implements MessageQueueListener {
 
     /**
      * 订单状态变更
-     * @param messageExt
      */
-    public void orderStatusEvent(MessageQueue messageExt) {
-
-        switch (OrderTagsEnum.valueOf(messageExt.getTag())) {
+    public void orderStatusEvent(OrderEvent evt) {
+        OrderTagsEnum tag = evt.getTag();
+        String body = evt.getBody();
+        switch (tag) {
             //订单创建
             case ORDER_CREATE:
-                String key = new String(messageExt.getBody());
+                String key = body;
                 TradeDTO tradeDTO = JSONUtil.toBean(cache.getString(key), TradeDTO.class);
                 boolean result = true;
                 for (TradeEvent event : tradeEvent) {
@@ -89,11 +85,11 @@ public class OrderMessageListener implements MessageQueueListener {
             case STATUS_CHANGE:
                 for (OrderStatusChangeEvent orderStatusChangeEvent : orderStatusChangeEvents) {
                     try {
-                        OrderMessage orderMessage = JSONUtil.toBean(new String(messageExt.getBody()), OrderMessage.class);
+                        OrderMessage orderMessage = JSONUtil.toBean(body, OrderMessage.class);
                         orderStatusChangeEvent.orderChange(orderMessage);
                     } catch (Exception e) {
                         log.error("订单{},在{}业务中，状态修改事件执行异常",
-                                new String(messageExt.getBody()),
+                                body,
                                 orderStatusChangeEvent.getClass().getName(),
                                 e);
                     }
